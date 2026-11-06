@@ -108,8 +108,9 @@ def reportar_agotado(request):
 
 
 @require_POST
-@permiso_requerido("cocina", "ver")
+@permiso_requerido("dashboard", "ver")
 def cambiar_estado_incidencia(request, pk):
+    """El dueño/administrador responde al reporte de cocina."""
     incidencia = get_object_or_404(IncidenciaCocina, pk=pk)
     nuevo_estado = request.POST.get("estado")
     if nuevo_estado in dict(IncidenciaCocina.ESTADOS):
@@ -122,8 +123,9 @@ def cambiar_estado_incidencia(request, pk):
 
 
 @require_POST
-@permiso_requerido("cocina", "ver")
+@permiso_requerido("dashboard", "ver")
 def agregar_observacion_incidencia(request, pk):
+    """El dueño/administrador deja una respuesta escrita al reporte de cocina."""
     incidencia = get_object_or_404(IncidenciaCocina, pk=pk)
     observacion = request.POST.get("observacion", "").strip()
     if observacion:

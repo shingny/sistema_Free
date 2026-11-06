@@ -18,32 +18,57 @@
 </div>
 {% endif %}
 <div class="tarjeta">
-  <table class="tabla">
-    <thead>
-      <tr>
-        <th>Fecha</th><th>Tipo</th><th>Producto</th><th>Descripción</th><th>Usuario</th><th>Estado</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for i in incidencias %}
-      <tr>
-        <td>{{ i.creado }}</td>
-        <td>{{ i.get_tipo_display }}</td>
-        <td>{{ i.producto|default:"-" }}</td>
-        <td>{{ i.descripcion }}</td>
-        <td>{{ i.creado_por.nombre_completo }}</td>
-        <td>
-          {% if i.estado == "pendiente" %}<span class="insignia aviso">Pendiente</span>
-          {% elif i.estado == "en_camino" %}<span class="insignia ok">En camino</span>
-          {% elif i.estado == "rechazado" %}<span class="insignia off">Rechazado</span>
-          {% elif i.estado == "resuelto" %}<span class="insignia neutro">Resuelto</span>
-          {% else %}<span class="insignia aviso">Pendiente</span>{% endif %}
-        </td>
-      </tr>
-      {% empty %}
-        <tr><td colspan="6">Sin incidencias.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  {% if 'dashboard.ver' in permisos %}
+  <p class="ayuda">Responde al reporte de cocina: recházalo, déjalo pendiente, márcalo en camino o resuelto.</p>
+  {% else %}
+  <p class="ayuda">Solo lectura: el dueño es quien responde a estos reportes.</p>
+  {% endif %}
+  <div class="tabla-scroll">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>Fecha</th><th>Tipo</th><th>Producto</th><th>Descripción</th><th>Usuario</th><th>Estado</th><th>Respuesta del dueño</th>
+          {% if 'dashboard.ver' in permisos %}<th><span class="sr">Acciones</span></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in incidencias %}
+        <tr>
+          <td>{{ i.creado|date:"d/m/Y H:i" }}</td>
+          <td>{{ i.get_tipo_display }}</td>
+          <td>{{ i.producto|default:"-" }}</td>
+          <td>{{ i.descripcion }}</td>
+          <td>{{ i.creado_por.nombre_completo }}</td>
+          <td>
+            {% if i.estado == "pendiente" %}<span class="insignia aviso">Pendiente</span>
+            {% elif i.estado == "en_camino" %}<span class="insignia ok">En camino</span>
+            {% elif i.estado == "rechazado" %}<span class="insignia off">Rechazado</span>
+            {% elif i.estado == "resuelto" %}<span class="insignia neutro">Resuelto</span>
+            {% else %}<span class="insignia aviso">Pendiente</span>{% endif %}
+          </td>
+          <td>{{ i.observacion_dueno|default:"&mdash;" }}</td>
+          {% if 'dashboard.ver' in permisos %}
+          <td class="acciones" style="white-space:normal">
+            <form method="post" action="{% url 'cocina:cambiar_estado_incidencia' i.pk %}" style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
+              {% csrf_token %}
+              <button class="btn-accion" name="estado" value="pendiente" type="submit">Marcar pendiente</button>
+              <button class="btn-accion" name="estado" value="en_camino" type="submit">En camino</button>
+              <button class="btn-accion" name="estado" value="resuelto" type="submit">Resuelto</button>
+              <button class="btn-accion peligro" name="estado" value="rechazado" type="submit">Rechazar</button>
+            </form>
+            <form method="post" action="{% url 'cocina:agregar_observacion_incidencia' i.pk %}" style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin-top:.35rem">
+              {% csrf_token %}
+              <input type="text" name="observacion" maxlength="300" value="{{ i.observacion_dueno }}" placeholder="Observación para cocina" aria-label="Observación para cocina" style="min-width:220px">
+              <button class="btn-accion" type="submit">Guardar observación</button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% empty %}
+          <tr><td colspan="{% if 'dashboard.ver' in permisos %}8{% else %}7{% endif %}">Sin incidencias.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endblock %}
