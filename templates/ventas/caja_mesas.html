@@ -1,0 +1,99 @@
+{% extends panel_base %}
+{% block titulo %}Mesas - Caja{% endblock %}
+{% block cabecera %}Mesas{% endblock %}
+{% block contenido %}
+<div class="tarjeta">
+  <div class="acciones-superiores">
+    <a class="btn btn-prim" href="{% url 'caja:nueva_venta' %}">Nueva venta</a>
+  </div>
+  <table class="tabla">
+    <thead>
+      <tr>
+        <th>Número</th><th>Estado</th><th>Total cuenta</th><th><span class="sr">Acciones</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fila in filas %}
+      <tr>
+        <td><strong>Mesa {{ fila.mesa.numero }}</strong></td>
+        <td>
+          {% if fila.ocupada %}<span class="badge badge-alerta">Ocupada</span>{% else %}<span class="badge badge-ok">Libre</span>{% endif %}
+        </td>
+        <td class="der">
+          {% if fila.cuenta %}S/ {{ fila.total|floatformat:2 }}{% else %}—{% endif %}
+        </td>
+        <td class="acciones">
+          {% if fila.cuenta %}
+            <button class="btn btn-sec btn-sm" type="button" data-detalle="{{ fila.mesa.pk }}" onclick="toggleDetalleMesa({{ fila.mesa.pk }}, this)">Ver detalles</button>
+            <a class="btn btn-prim btn-sm" href="{% url 'caja:caja_cobrar_cuenta' fila.cuenta.pk %}">Cobrar</a>
+          {% else %}
+            <span class="btn btn-sec btn-sm" style="cursor:not-allowed;opacity:.6;">—</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% if fila.cuenta %}
+      <tr id="detalle-mesa-{{ fila.mesa.pk }}" class="detalle-fila oculto">
+        <td colspan="4">
+          <div class="tarjeta" style="margin:.5rem 0;">
+            <div class="tarjeta-cab" style="margin-bottom:.75rem;">
+              <h4 style="margin:0;">Cuenta abierta · Mesa {{ fila.mesa.numero }}</h4>
+              <a class="btn btn-prim btn-sm" href="{% url 'caja:caja_cobrar_cuenta' fila.cuenta.pk %}">Cobrar cuenta</a>
+            </div>
+            {% if fila.pedidos %}
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th>Ronda</th><th>Producto</th><th>Cantidad</th><th class="der">Precio unit.</th><th class="der">Subtotal</th><th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in fila.pedidos %}
+                  {% for d in p.detalles.all %}
+                  <tr>
+                    <td>{{ p.ronda }}</td>
+                    <td>{{ d.nombre_producto }}</td>
+                    <td class="centro">{{ d.cantidad }}</td>
+                    <td class="der">S/ {{ d.precio_unitario|floatformat:2 }}</td>
+                    <td class="der">S/ {{ d.subtotal|floatformat:2 }}</td>
+                    <td>
+                      {% if p.estado == "pendiente" %}<span class="insignia aviso">Pendiente</span>
+                      {% elif p.estado == "en_preparacion" %}<span class="insignia aviso">En preparación</span>
+                      {% elif p.estado == "listo" %}<span class="insignia ok">Listo</span>
+                      {% elif p.estado == "entregado" %}<span class="insignia ok">Entregado</span>
+                      {% else %}<span class="insignia off">Cancelado</span>{% endif %}
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr><td colspan="6" class="vacio">Sin productos registrados en esta ronda.</td></tr>
+                  {% endfor %}
+                {% empty %}
+                <tr><td colspan="6" class="vacio">La cuenta no tiene productos registrados.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% else %}
+            <p class="vacio" style="margin:1rem 0;">Esta mesa no tiene cuenta abierta.</p>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endif %}
+      {% empty %}
+      <tr><td colspan="4">No hay mesas registradas.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<script>
+function toggleDetalleMesa(pk, btn) {
+  var fila = document.getElementById("detalle-mesa-" + pk);
+  if (fila.classList.contains("oculto")) {
+    fila.classList.remove("oculto");
+    btn.textContent = "Ocultar detalles";
+  } else {
+    fila.classList.add("oculto");
+    btn.textContent = "Ver detalles";
+  }
+}
+</script>
+{% endblock %}

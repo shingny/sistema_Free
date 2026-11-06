@@ -1,0 +1,26 @@
+{% extends panel_base %}
+{% block titulo %}Categorías{% endblock %}
+{% block cabecera %}Categorías{% endblock %}
+{% block contenido %}
+<div class="barra-acciones"><p class="intro">Organizan la carta y el punto de venta.</p>
+  {% if 'categorias.crear' in permisos %}<a class="btn btn-prim" href="{% url 'catalogo:categoria_crear' %}">Nueva categoría</a>{% endif %}</div>
+<div class="tabla-scroll">
+<table class="tabla">
+  <thead><tr><th>Orden</th><th>Categoría</th><th>Productos</th><th>Estado</th><th><span class="sr">Acciones</span></th></tr></thead>
+  <tbody>
+  {% for c in categorias %}
+    <tr><td>{{ c.orden }}</td>
+      <td><strong>{{ c.nombre }}</strong><br><small>{{ c.descripcion }}</small></td>
+      <td>{{ c.activos }} activos de {{ c.total }}</td>
+      <td>{% if c.activo %}<span class="insignia ok">Activa</span>{% else %}<span class="insignia off">Inactiva</span>{% endif %}</td>
+      <td class="acciones">
+        {% if 'categorias.editar' in permisos %}<a class="btn btn-prim btn-sm" href="{% url 'catalogo:categoria_editar' c.pk %}">Editar</a>{% endif %}
+        {% if 'categorias.desactivar' in permisos %}
+        <form method="post" action="{% url 'catalogo:categoria_estado' c.pk %}" {% if c.activo %}data-confirmar="La categoría dejará de mostrarse en nuevas ventas." data-titulo="¿Desactivar categoría?" data-boton="Desactivar"{% endif %}>{% csrf_token %}
+          <button class="btn btn-prim btn-sm{% if c.activo %} peligro{% endif %}">{% if c.activo %}Desactivar{% else %}Activar{% endif %}</button></form>{% endif %}
+      </td></tr>
+  {% empty %}<tr><td colspan="5" class="vacio">Aún no hay categorías. Crea la primera (por ejemplo: Pollos, Combos, Bebidas).</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

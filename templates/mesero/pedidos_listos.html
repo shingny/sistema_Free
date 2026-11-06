@@ -1,0 +1,14 @@
+{% extends panel_base %}
+{% block titulo %}Pedidos listos{% endblock %}
+{% block cabecera %}Pedidos listos{% endblock %}
+{% block contenido %}
+<div class="tarjeta">
+  <ul>
+    {% for p in pedidos %}
+      <li>{{ p.numero }} · Mesa {{ p.mesa.numero }} · Ronda {{ p.ronda }} · S/ {{ p.total }}</li>
+    {% empty %}
+      <li>Sin pedidos listos.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

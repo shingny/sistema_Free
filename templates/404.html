@@ -1,0 +1,9 @@
+{% extends "base_auth.html" %}
+{% block titulo %}No encontrado{% endblock %}
+{% block contenido %}
+<div class="auth-tarjeta">
+  <h2>No encontramos esa página</h2>
+  <p class="ayuda">Revisa la dirección o vuelve al inicio.</p>
+  <a class="btn btn-prim" href="{% url 'nucleo:inicio' %}">Volver al inicio</a>
+</div>
+{% endblock %}

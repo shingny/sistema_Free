@@ -1,0 +1,40 @@
+name: Pruebas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    env:
+      DB_ENGINE: sqlite
+      DEBUG: "1"
+      SECRET_KEY: "solo-para-ci-no-es-produccion"
+      ALLOWED_HOSTS: "localhost,127.0.0.1"
+      TZ: "America/Lima"
+
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Comprobar configuración
+        run: python manage.py check
+
+      - name: Comprobar migraciones pendientes
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Ejecutar pruebas
+        run: python manage.py test -v 1

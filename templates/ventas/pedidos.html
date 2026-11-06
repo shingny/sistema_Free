@@ -1,0 +1,45 @@
+{% extends panel_base %}
+{% load nucleo_tags %}
+{% block titulo %}Pedidos{% endblock %}
+{% block cabecera %}Pedidos{% endblock %}
+{% block contenido %}
+<div class="barra-acciones">
+  <form method="get" class="filtros">
+    <input type="search" name="q" value="{{ f.q }}" placeholder="Número o cliente" aria-label="Buscar pedido">
+    <select name="estado" aria-label="Estado"><option value="">Todos los estados</option>
+      {% for codigo, nombre in estados %}<option value="{{ codigo }}"{% if f.estado == codigo %} selected{% endif %}>{{ nombre }}</option>{% endfor %}</select>
+    <select name="origen" aria-label="Origen"><option value="">Todos los orígenes</option>
+      {% for codigo, nombre in origenes %}<option value="{{ codigo }}"{% if f.origen == codigo %} selected{% endif %}>{{ nombre }}</option>{% endfor %}</select>
+    <button class="btn btn-sec">Filtrar</button>
+    {% if f.q or f.estado or f.origen %}<a class="enlace" href="{% url 'caja:pedidos' %}">Limpiar</a>{% endif %}
+  </form>
+  <a class="btn btn-prim" href="{% url 'caja:nueva_venta' %}">Nueva venta</a>
+</div>
+
+<div class="tabla-scroll">
+<table class="tabla">
+  <thead><tr><th>Pedido</th><th>Fecha</th><th>Origen</th><th>Mesa</th><th>Cliente</th><th class="der">Total</th><th>Estado</th><th><span class="sr">Acciones</span></th></tr></thead>
+  <tbody>
+  {% for p in pagina %}
+    <tr>
+      <td><strong>{{ p.numero }}</strong></td>
+      <td>{{ p.creado|date:"d/m/Y H:i" }}</td>
+      <td>{{ p.get_origen_display }}</td>
+      <td>{{ p.mesa|default:"&mdash;" }}</td>
+      <td>{{ p.cliente_nombre|default:"—" }}</td>
+      <td class="der">{{ p.total|soles }}</td>
+      <td>
+        {% if p.estado == "entregado" %}<span class="insignia ok">Entregado</span>
+        {% elif p.estado == "listo" %}<span class="insignia ok">Listo</span>
+        {% elif p.estado == "en_preparacion" %}<span class="insignia aviso">En preparación</span>
+        {% elif p.estado == "cancelado" %}<span class="insignia off">Cancelado</span>
+        {% else %}<span class="insignia neutro">Pendiente</span>{% endif %}
+      </td>
+      <td class="acciones"><a class="btn-accion" href="{% url 'caja:pedido_detalle' p.pk %}">Ver</a></td>
+    </tr>
+  {% empty %}<tr><td colspan="8" class="vacio">No hay pedidos con esos filtros.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% include "partials/paginacion.html" %}
+{% endblock %}

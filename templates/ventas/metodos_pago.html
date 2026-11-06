@@ -1,0 +1,33 @@
+{% extends panel_base %}
+{% block titulo %}Métodos de pago{% endblock %}
+{% block cabecera %}Métodos de pago{% endblock %}
+{% block contenido %}
+<div class="barra-acciones">
+  <p class="intro">Configura los medios de pago disponibles en el POS. Los pagos electrónicos pueden quedar pendientes de verificación.</p>
+  {% if puede_crear %}<a class="btn btn-prim" href="{% url 'ventas:metodo_pago_crear' %}">Nuevo método</a>{% endif %}
+</div>
+<div class="tabla-scroll">
+<table class="tabla">
+  <thead><tr><th>Método</th><th>Código</th><th>Efectivo físico</th><th>Verificación</th><th>Estado</th><th><span class="sr">Acciones</span></th></tr></thead>
+  <tbody>
+  {% for m in metodos %}
+    <tr>
+      <td><strong>{{ m.nombre }}</strong></td>
+      <td>{{ m.codigo }}</td>
+      <td>{% if m.afecta_efectivo %}<span class="insignia ok">Sí</span>{% else %}<span class="insignia off">No</span>{% endif %}</td>
+      <td>{% if m.requiere_verificacion %}<span class="insignia aviso">Sí</span>{% else %}<span class="insignia neutro">No</span>{% endif %}</td>
+      <td>{% if m.activo %}<span class="insignia ok">Activo</span>{% else %}<span class="insignia off">Inactivo</span>{% endif %}</td>
+      <td class="acciones">
+        {% if puede_editar %}<a class="btn-accion" href="{% url 'ventas:metodo_pago_editar' m.pk %}">Editar</a>{% endif %}
+        {% if puede_desactivar %}
+        <form method="post" action="{% url 'ventas:metodo_pago_estado' m.pk %}" {% if m.activo %}data-confirmar="Dejará de estar disponible en nuevas ventas." data-titulo="¿Desactivar {{ m.nombre }}?" data-boton="Desactivar"{% endif %}>{% csrf_token %}
+          <button class="btn-accion{% if m.activo %} peligro{% endif %}">{% if m.activo %}Desactivar{% else %}Activar{% endif %}</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% empty %}<tr><td colspan="6" class="vacio">No hay métodos de pago configurados.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

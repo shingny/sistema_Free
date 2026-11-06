@@ -1,0 +1,58 @@
+{% extends panel_base %}
+{% block titulo %}Cocina{% endblock %}
+{% block cabecera %}Cocina{% endblock %}
+{% block contenido %}
+<div class="barra-acciones">
+  <p class="ayuda">{{ total_activos }} pedido{{ total_activos|pluralize }} activo{{ total_activos|pluralize }}.</p>
+  <a class="btn btn-sec" href="{% url 'cocina:tablero' %}">Actualizar</a>
+</div>
+
+<div class="cocina-tablero">
+  {% for codigo, titulo, lista in columnas %}
+  <section class="tarjeta cocina-columna">
+    <h2>{{ titulo }} <span class="insignia neutro">{{ lista|length }}</span></h2>
+    {% for p in lista %}
+    <article class="cocina-pedido">
+      <div class="cocina-pedido-cab">
+        <strong>{{ p.numero }}</strong>
+        <span>{{ p.get_origen_display }}{% if p.mesa %} · {{ p.mesa }}{% endif %} · {{ p.get_prioridad_display }}</span>
+      </div>
+      <small class="tiempo">Hace {{ p.creado|timesince }}</small>
+      <ul>
+        {% for d in p.detalles.all %}
+        <li><strong>{{ d.cantidad }}×</strong> {{ d.nombre_producto }}{% if d.observacion %}<small>{{ d.observacion }}</small>{% endif %}</li>
+        {% endfor %}
+      </ul>
+      <div class="cocina-pedido-pie">
+        <a class="enlace" href="{% url 'cocina:pedido_detalle' p.pk %}">Ver detalle</a>
+        {% if puede_actualizar %}
+        <form method="post" action="{% url 'cocina:avanzar' p.pk %}">{% csrf_token %}
+          <button class="btn btn-prim" type="submit">
+            {% if p.estado == "pendiente" %}Iniciar preparación{% elif p.estado == "en_preparacion" %}Marcar listo{% else %}Marcar entregado{% endif %}
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </article>
+    {% empty %}<p class="vacio">Sin pedidos.</p>{% endfor %}
+  </section>
+  {% endfor %}
+</div>
+<script>
+(function () {
+  var endpoint = "{% url 'cocina:tablero_json' %}";
+  var inicial = null;
+  function revisar() {
+    fetch(endpoint, {credentials: "same-origin"})
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var firma = JSON.stringify(data);
+        if (inicial === null) { inicial = firma; return; }
+        if (firma !== inicial) { window.location.reload(); }
+      }).catch(function () {});
+  }
+  setInterval(revisar, 10000);
+  revisar();
+})();
+</script>
+{% endblock %}

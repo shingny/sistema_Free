@@ -1,0 +1,274 @@
+{% extends panel_base %}
+{% load static nucleo_tags l10n %}
+{% block titulo %}Mesero{% endblock %}
+{% block cabecera %}Nueva ronda{% endblock %}
+{% block contenido %}
+<div class="pos mesero-pos">
+  <section class="pos-catalogo">
+    <div class="pos-buscador">
+      <input type="search" id="buscar-producto" placeholder="Buscar producto por nombre" aria-label="Buscar producto">
+      <div class="pos-categorias">
+        <button type="button" class="chip-filtro activo" data-filtro-categoria="">Todos</button>
+        {% for c in categorias %}<button type="button" class="chip-filtro" data-filtro-categoria="{{ c.pk }}">{{ c.nombre }}</button>{% endfor %}
+      </div>
+    </div>
+
+    {% for c in categorias %}
+      {% if c.disponibles %}
+      <div class="pos-grupo" data-grupo-categoria="{{ c.pk }}">
+        <h2>{{ c.nombre }}</h2>
+        <div class="pos-productos">
+          {% for p in c.disponibles %}
+          <button type="button" class="pos-producto" data-producto data-id="{{ p.pk }}" data-nombre="{{ p.nombre }}" data-precio="{{ p.precio|unlocalize }}" data-categoria-id="{{ c.pk }}" aria-label="Agregar {{ p.nombre }} al pedido">
+            <span class="pos-foto">
+              {% if p.imagen %}<img src="{{ p.imagen.url }}" alt="" loading="lazy" decoding="async">{% else %}<span class="pos-sin-foto" aria-hidden="true">{{ p.nombre|slice:":1" }}</span>{% endif %}
+            </span>
+            <span class="pos-agregar" aria-hidden="true">+</span>
+            <span class="pos-nombre">{{ p.nombre }}</span>
+            <span class="pos-precio">{{ p.precio|soles }}</span>
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    {% empty %}
+      <p class="vacio">No hay productos disponibles. Revisa la carta en el panel administrativo.</p>
+    {% endfor %}
+  </section>
+
+  <aside class="pos-carrito mesero-carrito">
+    <h2>Mesa <span class="pos-contador" id="mesa-activa">—</span></h2>
+    <div class="mesero-mesas" id="mesero-mesas">
+      {% for fila in filas %}
+      <button type="button"
+              class="mesa-opcion {% if fila.ocupada %}ocupada{% else %}libre{% endif %}"
+              data-mesa="{{ fila.mesa.pk }}"
+              data-numero="{{ fila.mesa.numero }}"
+              data-estado="{% if fila.ocupada %}{{ fila.cuenta.estado }}{% else %}libre{% endif %}"
+              data-total="{{ fila.total|unlocalize }}"
+              {% if fila.cuenta.estado == 'cobro_solicitado' %}disabled aria-disabled="true"{% endif %}>
+        <strong>Mesa {{ fila.mesa.numero }}</strong>
+        <span class="mesa-datos">{% if fila.ocupada %}{{ fila.rondas }} ronda{{ fila.rondas|pluralize }} · S/ {{ fila.total }}{% else %}Libre{% endif %}</span>
+        {% if fila.cuenta.estado == 'cobro_solicitado' %}<span class="insignia aviso">Cobro solicitado</span>{% endif %}
+      </button>
+      {% endfor %}
+    </div>
+    <p class="ayuda" id="mesa-ayuda">Selecciona una mesa para agregar productos.</p>
+
+    <h2>Pedido <span class="pos-contador" id="pos-contador">0</span><button type="button" class="pos-limpiar" id="pos-limpiar">Limpiar</button></h2>
+    <div class="pos-lineas" id="pos-lineas"><p class="vacio">Agrega productos para comenzar.</p></div>
+
+    <form method="post" id="pedido-form">{% csrf_token %}
+      <input type="hidden" name="mesa" id="mesa-id" value="">
+      <input type="hidden" name="items" id="items" value="[]">
+      <div class="pos-totales">
+        <div><span>Subtotal</span><strong id="subtotal">{{ 0|soles }}</strong></div>
+        <div class="pos-total"><span>Total del pedido</span><strong id="total">{{ 0|soles }}</strong></div>
+      </div>
+      <div class="campo"><label for="observacion">Observación (opcional)</label><input type="text" name="observacion" id="observacion" maxlength="300"></div>
+      <div class="campo"><label for="prioridad">Prioridad</label>
+        <select name="prioridad" id="prioridad">
+          <option value="normal">Normal</option>
+          <option value="alta">Alta</option>
+          <option value="urgente">Urgente</option>
+        </select>
+      </div>
+      <div class="pos-mensaje" id="pos-mensaje" role="status" hidden></div>
+      <button class="btn btn-prim btn-bloque" type="submit" id="agregar-pedido">Agregar al pedido</button>
+    </form>
+    <p class="ayuda" id="ver-cuenta-wrap" hidden><a id="ver-cuenta" href="#">Ver cuenta de la mesa</a></p>
+  </aside>
+</div>
+
+<details class="tarjeta mesero-pedidos-activos">
+  <summary>Pedidos activos ({{ pedidos_activos|length }})</summary>
+  {% if pedidos_activos %}
+    <table class="tabla">
+      <thead><tr><th>Pedido</th><th>Mesa</th><th>Ronda</th><th>Estado</th><th>Total</th></tr></thead>
+      <tbody>
+        {% for p in pedidos_activos %}
+          <tr>
+            <td>
+              {% if p.cuenta %}
+                <a href="{% url 'mesero:cuenta_detalle' p.cuenta.pk %}">{{ p.numero }}</a>
+              {% else %}{{ p.numero }}{% endif %}
+            </td>
+            <td>{% if p.mesa %}Mesa {{ p.mesa.numero }}{% else %}-{% endif %}</td>
+            <td>{{ p.ronda }}</td>
+            <td><span class="insignia {% if p.estado == 'listo' %}ok{% elif p.estado == 'en_preparacion' %}aviso{% else %}neutro{% endif %}">{{ p.get_estado_display }}</span></td>
+            <td>S/ {{ p.total }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="vacio">Sin pedidos activos.</p>
+  {% endif %}
+</details>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  "use strict";
+  var cart = {};
+  var mesa = null;
+  var urlPedido = "{% url 'mesero:pedido_rapido' %}";
+  var lineas = document.getElementById("pos-lineas");
+  var contador = document.getElementById("pos-contador");
+  var itemsInput = document.getElementById("items");
+  var subtotalEl = document.getElementById("subtotal");
+  var totalEl = document.getElementById("total");
+  var form = document.getElementById("pedido-form");
+  var mensajeEl = document.getElementById("pos-mensaje");
+  var ayudaEl = document.getElementById("mesa-ayuda");
+  var verCuentaWrap = document.getElementById("ver-cuenta-wrap");
+  var verCuenta = document.getElementById("ver-cuenta");
+
+  function soles(n) { return "S/ " + (Number(n) || 0).toFixed(2); }
+  function total() { return Object.keys(cart).reduce(function (s, k) { return s + cart[k].precio * cart[k].cantidad; }, 0); }
+
+  function render() {
+    var ids = Object.keys(cart);
+    var unidades = ids.reduce(function (s, k) { return s + cart[k].cantidad; }, 0);
+    if (contador) contador.textContent = unidades;
+    if (!ids.length) {
+      lineas.innerHTML = '<p class="vacio">Agrega productos para comenzar.</p>';
+    } else {
+      lineas.innerHTML = ids.map(function (id) {
+        var l = cart[id];
+        return '<div class="pos-linea"><div><strong>' + l.nombre + '</strong><small>' + soles(l.precio) + ' c/u</small></div>' +
+          '<div class="pos-cantidad"><button type="button" data-menos="' + id + '" aria-label="Quitar uno">−</button><span>' + l.cantidad + '</span><button type="button" data-mas="' + id + '" aria-label="Agregar uno">+</button></div>' +
+          '<strong>' + soles(l.precio * l.cantidad) + '</strong>' +
+          '<button type="button" class="pos-quitar" data-quitar="' + id + '" aria-label="Quitar producto">×</button></div>';
+      }).join("");
+    }
+    itemsInput.value = JSON.stringify(ids.map(function (id) {
+      return { producto_id: Number(id), cantidad: cart[id].cantidad };
+    }));
+    subtotalEl.textContent = soles(total());
+    totalEl.textContent = soles(total());
+  }
+
+  function agregar(id, nombre, precio) {
+    var valor = Number(String(precio).replace(",", ".")) || 0;
+    cart[id] = cart[id] || { nombre: nombre, precio: valor, cantidad: 0 };
+    cart[id].cantidad += 1;
+    render();
+  }
+
+  function mostrarMensaje(texto, tipo) {
+    mensajeEl.textContent = texto;
+    mensajeEl.className = "pos-mensaje " + tipo;
+    mensajeEl.hidden = false;
+  }
+
+  document.querySelectorAll("[data-producto]").forEach(function (b) {
+    b.addEventListener("click", function () { agregar(b.dataset.id, b.dataset.nombre, b.dataset.precio); });
+  });
+  lineas.addEventListener("click", function (e) {
+    var mas = e.target.closest("[data-mas]"), menos = e.target.closest("[data-menos]"), quitar = e.target.closest("[data-quitar]");
+    if (quitar) { delete cart[quitar.dataset.quitar]; render(); return; }
+    if (mas) { cart[mas.dataset.mas].cantidad += 1; render(); }
+    if (menos) {
+      var id = menos.dataset.menos;
+      cart[id].cantidad -= 1;
+      if (cart[id].cantidad <= 0) delete cart[id];
+      render();
+    }
+  });
+  document.getElementById("pos-limpiar").addEventListener("click", function () { cart = {}; render(); });
+
+  document.querySelectorAll(".mesa-opcion").forEach(function (b) {
+    b.addEventListener("click", function () {
+      if (b.disabled) return;
+      document.querySelectorAll(".mesa-opcion").forEach(function (x) { x.classList.remove("seleccionada"); });
+      b.classList.add("seleccionada");
+      mesa = {
+        id: b.dataset.mesa,
+        numero: b.dataset.numero,
+        estado: b.dataset.estado,
+        total: Number(b.dataset.total) || 0
+      };
+      document.getElementById("mesa-id").value = mesa.id;
+      document.getElementById("mesa-activa").textContent = "Mesa " + mesa.numero;
+      if (mesa.estado === "libre") {
+        ayudaEl.textContent = "Mesa libre: al agregar el pedido se abrirá la cuenta.";
+      } else if (mesa.estado === "cobro_solicitado") {
+        ayudaEl.textContent = "Cobro solicitado: caja debe cobrar antes de agregar más.";
+      } else {
+        ayudaEl.textContent = "Mesa ocupada: los productos se agregarán a su cuenta.";
+      }
+      verCuentaWrap.hidden = true;
+    });
+  });
+
+  document.querySelectorAll("[data-filtro-categoria]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll("[data-filtro-categoria]").forEach(function (x) { x.classList.remove("activo"); });
+      b.classList.add("activo");
+      var cat = b.dataset.filtroCategoria;
+      document.querySelectorAll("[data-grupo-categoria]").forEach(function (g) {
+        g.hidden = cat !== "" && g.dataset.grupoCategoria !== cat;
+      });
+    });
+  });
+  var buscar = document.getElementById("buscar-producto");
+  if (buscar) buscar.addEventListener("input", function () {
+    var q = buscar.value.toLowerCase().trim();
+    document.querySelectorAll("[data-producto]").forEach(function (p) {
+      p.hidden = q && p.dataset.nombre.toLowerCase().indexOf(q) === -1;
+    });
+  });
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    mensajeEl.hidden = true;
+    if (!mesa) { window.alert("Selecciona una mesa antes de agregar el pedido."); return; }
+    if (!Object.keys(cart).length) { window.alert("Agrega al menos un producto al pedido."); return; }
+    itemsInput.value = JSON.stringify(Object.keys(cart).map(function (id) {
+      return { producto_id: Number(id), cantidad: cart[id].cantidad };
+    }));
+    var boton = document.getElementById("agregar-pedido");
+    boton.disabled = true;
+    window.fetch(urlPedido, {
+      method: "POST",
+      body: new window.FormData(form),
+      headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+      .then(function (res) {
+        var d = res.data;
+        if (!d.ok) { mostrarMensaje(d.error || "No se pudo enviar el pedido.", "error"); return; }
+        cart = {};
+        render();
+        document.getElementById("observacion").value = "";
+        var card = document.querySelector('.mesa-opcion[data-mesa="' + mesa.id + '"]');
+        if (card) {
+          card.dataset.estado = "abierta";
+          card.dataset.total = d.total;
+          card.classList.remove("libre");
+          card.classList.add("ocupada");
+          card.querySelector(".mesa-datos").textContent =
+            d.rondas + (d.rondas === 1 ? " ronda" : " rondas") + " · S/ " + d.total;
+        }
+        mesa.estado = "abierta";
+        ayudaEl.textContent = "Mesa ocupada: los productos se agregarán a su cuenta.";
+        verCuenta.href = d.url_cuenta;
+        verCuentaWrap.hidden = false;
+        mostrarMensaje(
+          d.es_nueva
+            ? "Pedido " + d.pedido + " enviado a cocina (ronda " + d.ronda + ")."
+            : "Pedido " + d.pedido + " actualizado.",
+          "ok"
+        );
+      })
+      .catch(function () {
+        mostrarMensaje("No se pudo conectar con el servidor. Intenta nuevamente.", "error");
+      })
+      .then(function () { boton.disabled = false; });
+  });
+
+  render();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends panel_base %}
+{% block titulo %}{% if editando %}Editar producto{% else %}Nuevo producto{% endif %}{% endblock %}
+{% block cabecera %}{% if editando %}Editar producto{% else %}Nuevo producto{% endif %}{% endblock %}
+{% block contenido %}
+{% if not hay_categorias %}
+<div class="alerta alerta-aviso">Antes de crear productos necesitas al menos una categoría activa.
+  {% if 'categorias.crear' in permisos %}<a class="enlace" href="{% url 'catalogo:categoria_crear' %}">Crear categoría</a>{% endif %}</div>
+{% endif %}
+<section class="tarjeta formulario">
+  <form method="post" enctype="multipart/form-data" data-una-vez>{% csrf_token %}
+    {% if form.non_field_errors %}<div class="alerta alerta-error">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="rejilla-2">
+      {% include "partials/campo.html" with campo=form.nombre %}
+      {% include "partials/campo.html" with campo=form.categoria %}
+      {% include "partials/campo.html" with campo=form.precio %}
+    </div>
+    {% include "partials/campo.html" with campo=form.descripcion %}
+    <div class="campo{% if form.imagen.errors %} con-error{% endif %}">
+      <label for="{{ form.imagen.id_for_label }}">Imagen (opcional)</label>
+      {% if editando and editando.imagen %}<img src="{{ editando.imagen.url }}" alt="Imagen actual" class="vista-previa" id="vista-previa">{% else %}<img alt="" class="vista-previa" id="vista-previa" hidden>{% endif %}
+      {{ form.imagen }}
+      {% for e in form.imagen.errors %}<small class="error">{{ e }}</small>{% endfor %}
+      {% if editando and editando.imagen %}<label class="check-linea">{{ form.quitar_imagen }} Quitar la imagen actual</label>{% endif %}
+      <small class="ayuda">PNG o JPG, hasta 2 MB.</small>
+    </div>
+    {% if editando %}<p class="ayuda">Los cambios de precio quedan en la auditoría. Las ventas ya registradas conservarán el precio con el que se hicieron.</p>{% endif %}
+    <div class="acciones-form"><button class="btn btn-prim" type="submit">Guardar producto</button>
+      <a class="btn btn-sec" href="{% url 'catalogo:productos' %}">Cancelar</a></div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends panel_base %}
+{% block titulo %}Inicio{% endblock %}
+{% block cabecera %}Hola, {{ request.user.first_name }}{% endblock %}
+{% block contenido %}
+<section class="tarjeta">
+  <h2>Tu panel aún no tiene módulos</h2>
+  <p>Tu rol ({{ request.user.rol|default:"sin rol" }}) todavía no tiene módulos habilitados en esta etapa del sistema. Los paneles de caja, salón y cocina llegarán en los próximos Sprints.</p>
+  <a class="btn btn-sec" href="{% url 'cuentas:perfil' %}">Ir a Mi perfil</a>
+</section>
+{% endblock %}

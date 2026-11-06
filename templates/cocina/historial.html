@@ -1,0 +1,17 @@
+{% extends panel_base %}
+{% block titulo %}Historial cocina{% endblock %}
+{% block cabecera %}Historial de cocina{% endblock %}
+{% block contenido %}
+<div class="tarjeta">
+  <table class="tabla">
+    <thead><tr><th>Número</th><th>Mesa</th><th>Estado</th><th>Actualizado</th></tr></thead>
+    <tbody>
+      {% for p in pedidos %}
+        <tr><td>{{ p.numero }}</td><td>{{ p.mesa|default:"-" }}</td><td>{{ p.get_estado_display }}</td><td>{{ p.actualizado }}</td></tr>
+      {% empty %}
+        <tr><td colspan="4">Sin historial.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

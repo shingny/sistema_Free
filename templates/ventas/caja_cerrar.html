@@ -1,0 +1,51 @@
+{% extends panel_base %}
+{% load nucleo_tags %}
+{% block titulo %}Cierre de caja{% endblock %}
+{% block cabecera %}Cierre de caja{% endblock %}
+{% block contenido %}
+{% if not puede_cerrar %}
+<div class="alerta alerta-info">Este turno ya está cerrado. El cierre se conserva como historial inalterable.</div>
+{% endif %}
+<div class="barra-acciones">
+  <p class="intro">Caja <strong>{{ turno.caja.nombre }}</strong> · {{ turno.usuario.nombre_completo }} · apertura {{ turno.fecha_apertura|date:"d/m/Y H:i" }}.</p>
+  <a class="btn btn-sec" href="{% url 'caja:caja_movimientos' %}?turno={{ turno.pk }}">Ver movimientos</a>
+</div>
+
+<div class="indicadores">
+  <div class="indicador"><span class="valor">{{ turno.monto_inicial|soles }}</span><span class="etiqueta">Monto inicial</span></div>
+  <div class="indicador"><span class="valor">{{ esperado|soles }}</span><span class="etiqueta">Efectivo esperado</span></div>
+  <div class="indicador"><span class="valor">{% if turno.estado == "cerrada" %}{{ turno.monto_contado|soles }}{% else %}—{% endif %}</span><span class="etiqueta">Efectivo contado</span></div>
+</div>
+
+{% if turno.estado == "cerrada" %}
+<section class="tarjeta">
+  <h2>Resumen del cierre</h2>
+  <dl class="datos">
+    <dt>Efectivo esperado</dt><dd>{{ turno.efectivo_esperado|soles }}</dd>
+    <dt>Efectivo contado</dt><dd>{{ turno.monto_contado|soles }}</dd>
+    <dt>Diferencia</dt><dd>{% if turno.diferencia == 0 %}<span class="insignia ok">Sin diferencia</span>{% elif turno.diferencia > 0 %}<span class="insignia aviso">Sobrante {{ turno.diferencia|soles }}</span>{% else %}<span class="insignia off">Faltante {{ turno.diferencia|soles }}</span>{% endif %}</dd>
+    <dt>Cierre</dt><dd>{{ turno.fecha_cierre|date:"d/m/Y H:i" }} · {{ turno.cerrado_por.nombre_completo|default:"—" }}</dd>
+    <dt>Observación</dt><dd>{{ turno.observacion_cierre|default:"—" }}</dd>
+  </dl>
+</section>
+{% else %}
+<div class="rejilla-2">
+  <section class="tarjeta formulario">
+    <h2>Registrar cierre</h2>
+    <p class="ayuda">Cuenta el efectivo físico de la caja e ingrésalo. El sistema calculará la diferencia contra el efectivo esperado.</p>
+    <form method="post" data-confirmar="El turno quedará cerrado y no admitirá más movimientos." data-titulo="¿Cerrar la caja?" data-boton="Cerrar caja">{% csrf_token %}
+      {% include "partials/campo.html" with campo=form.monto_contado %}
+      {% include "partials/campo.html" with campo=form.observacion %}
+      <button class="btn btn-prim" type="submit">Cerrar caja</button>
+    </form>
+  </section>
+  <section class="tarjeta">
+    <h2>Movimientos del turno</h2>
+    <ul class="lista-simple">
+      {% for m in movimientos %}<li><span>{{ m.get_tipo_display }} · {{ m.descripcion }}</span><strong>{% if m.tipo == "egreso" or m.tipo == "devolucion" %}- {% endif %}{{ m.monto|soles }}</strong></li>
+      {% empty %}<li class="vacio">Sin movimientos.</li>{% endfor %}
+    </ul>
+  </section>
+</div>
+{% endif %}
+{% endblock %}

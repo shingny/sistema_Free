@@ -1,0 +1,37 @@
+{% extends panel_base %}
+{% block titulo %}Configuración{% endblock %}
+{% block cabecera %}Configuración general{% endblock %}
+{% block contenido %}
+<section class="tarjeta formulario">
+  {% if not puede_editar %}<div class="alerta alerta-info">Estás en modo consulta: tu rol no puede modificar la configuración.</div>{% endif %}
+  <form method="post" enctype="multipart/form-data" data-una-vez>{% csrf_token %}
+    <fieldset {% if not puede_editar %}disabled{% endif %}>
+    <div class="rejilla-2">
+      {% include "partials/campo.html" with campo=form.nombre_comercial %}
+      {% include "partials/campo.html" with campo=form.razon_social %}
+      {% include "partials/campo.html" with campo=form.ruc %}
+      {% include "partials/campo.html" with campo=form.telefono %}
+      {% include "partials/campo.html" with campo=form.direccion %}
+      {% include "partials/campo.html" with campo=form.correo %}
+      {% include "partials/campo.html" with campo=form.horario_atencion %}
+      {% include "partials/campo.html" with campo=form.moneda %}
+      {% include "partials/campo.html" with campo=form.zona_horaria %}
+      <div class="campo">
+        <label class="check-linea">{{ form.permitir_pago_parcial }} Permitir pago parcial</label>
+        <small class="ayuda">Si se desactiva, cada venta deberá quedar pagada por el total antes de cerrarse.</small>
+      </div>
+    </div>
+    <div class="campo{% if form.logo.errors %} con-error{% endif %}">
+      <label for="{{ form.logo.id_for_label }}">Logo</label>
+      {% if config_obj.logo %}<img src="{{ config_obj.logo.url }}" alt="Logo actual" class="vista-previa" id="vista-previa">{% else %}<img alt="" class="vista-previa" id="vista-previa" hidden>{% endif %}
+      {{ form.logo }}
+      {% for e in form.logo.errors %}<small class="error">{{ e }}</small>{% endfor %}
+      {% if config_obj.logo %}<label class="check-linea">{{ form.quitar_logo }} Quitar el logo actual</label>{% endif %}
+      <small class="ayuda">PNG o JPG, hasta 2 MB.</small>
+    </div>
+    </fieldset>
+    <p class="ayuda">La moneda (soles peruanos) y la zona horaria (America/Lima) son parte de las reglas del sistema y no se modifican.</p>
+    {% if puede_editar %}<div class="acciones-form"><button class="btn btn-prim" type="submit">Guardar configuración</button></div>{% endif %}
+  </form>
+</section>
+{% endblock %}

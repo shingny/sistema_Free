@@ -1,0 +1,16 @@
+{% extends panel_base %}
+{% block titulo %}Roles y permisos{% endblock %}
+{% block cabecera %}Roles y permisos{% endblock %}
+{% block contenido %}
+<p class="intro">Los permisos se aplican por módulo y acción, y se validan siempre en el servidor. Cada rol muestra solo los permisos que le corresponden; el dueño conserva todos y nadie puede conceder más de lo que él mismo tiene.</p>
+<div class="rejilla-3">
+  {% for fila in filas %}
+  <article class="tarjeta rol">
+    <h2>{{ fila.rol.nombre }}</h2>
+    <p>{{ fila.rol.descripcion }}</p>
+    <p class="metricas"><strong>{{ fila.usuarios }}</strong> usuarios activos · <strong>{{ fila.permisos }}</strong> de {{ fila.total_permisos }} permisos</p>
+    <a class="btn btn-prim btn-sm" href="{% url 'cuentas:rol_permisos' fila.rol.pk %}">{% if fila.editable and 'roles.editar' in permisos %}Configurar permisos{% else %}Ver permisos{% endif %}</a>
+  </article>
+  {% endfor %}
+</div>
+{% endblock %}

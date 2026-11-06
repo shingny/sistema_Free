@@ -1,0 +1,15 @@
+{% extends panel_base %}
+{% block titulo %}Credenciales{% endblock %}
+{% block cabecera %}Credenciales de acceso{% endblock %}
+{% block contenido %}
+<section class="tarjeta formulario">
+  <div class="alerta alerta-aviso">Esta contraseña se muestra <strong>una sola vez</strong>. Entrégasela a {{ usuario.nombre_completo }} en persona y pídele que no la comparta. Deberá cambiarla al ingresar.</div>
+  <dl class="datos">
+    <dt>Trabajador</dt><dd>{{ usuario.nombre_completo }} · {{ usuario.rol }}</dd>
+    <dt>Usuario</dt><dd><code>{{ usuario.username }}</code></dd>
+    <dt>Contraseña temporal</dt><dd><code class="clave" id="clave-temporal">{{ clave }}</code>
+      <button type="button" class="btn btn-sec btn-sm" data-copiar="#clave-temporal">Copiar</button></dd>
+  </dl>
+  <a class="btn btn-prim" href="{% url 'cuentas:usuarios' %}">Listo, volver a usuarios</a>
+</section>
+{% endblock %}

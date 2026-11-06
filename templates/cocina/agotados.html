@@ -1,0 +1,49 @@
+{% extends panel_base %}
+{% block titulo %}Productos agotados{% endblock %}
+{% block cabecera %}Productos agotados e incidencias{% endblock %}
+{% block contenido %}
+{% if 'cocina.actualizar' in permisos and 'dashboard.ver' not in permisos %}
+<div class="tarjeta">
+  <form method="post" action="{% url 'cocina:reportar_agotado' %}">
+    {% csrf_token %}
+    <label>Producto
+      <select name="producto">
+        <option value="">-- General --</option>
+        {% for prod in productos %}<option value="{{ prod.pk }}">{{ prod.nombre }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Descripción <textarea name="descripcion" rows="2" maxlength="300"></textarea></label>
+    <button class="btn btn-prim" type="submit">Reportar</button>
+  </form>
+</div>
+{% endif %}
+<div class="tarjeta">
+  <table class="tabla">
+    <thead>
+      <tr>
+        <th>Fecha</th><th>Tipo</th><th>Producto</th><th>Descripción</th><th>Usuario</th><th>Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for i in incidencias %}
+      <tr>
+        <td>{{ i.creado }}</td>
+        <td>{{ i.get_tipo_display }}</td>
+        <td>{{ i.producto|default:"-" }}</td>
+        <td>{{ i.descripcion }}</td>
+        <td>{{ i.creado_por.nombre_completo }}</td>
+        <td>
+          {% if i.estado == "pendiente" %}<span class="insignia aviso">Pendiente</span>
+          {% elif i.estado == "en_camino" %}<span class="insignia ok">En camino</span>
+          {% elif i.estado == "rechazado" %}<span class="insignia off">Rechazado</span>
+          {% elif i.estado == "resuelto" %}<span class="insignia neutro">Resuelto</span>
+          {% else %}<span class="insignia aviso">Pendiente</span>{% endif %}
+        </td>
+      </tr>
+      {% empty %}
+        <tr><td colspan="6">Sin incidencias.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

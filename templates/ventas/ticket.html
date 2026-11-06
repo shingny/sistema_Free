@@ -1,0 +1,82 @@
+{% load nucleo_tags %}<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ticket {{ venta.numero }}</title>
+  <style>
+    :root{font-family:"Segoe UI",Arial,sans-serif;color:#111}
+    *{box-sizing:border-box}
+    body{margin:0;background:#eef0ea;padding:1.5rem}
+    .ticket{width:100%;max-width:380px;margin:0 auto;background:#fff;padding:1.2rem;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.12)}
+    .marca{text-align:center;border-bottom:1px dashed #999;padding-bottom:.7rem;margin-bottom:.7rem}
+    .marca img{max-width:90px;max-height:70px;object-fit:contain;margin-bottom:.4rem}
+    .marca h1{font-size:1.15rem;margin:0}
+    .marca p{margin:.15rem 0;font-size:.78rem;color:#555}
+    .meta{font-size:.8rem;margin-bottom:.6rem}
+    .meta div{display:flex;justify-content:space-between;gap:1rem;padding:.12rem 0}
+    table{width:100%;border-collapse:collapse;font-size:.8rem;margin:.5rem 0}
+    th,td{text-align:left;padding:.3rem 0;border-bottom:1px dashed #ddd;vertical-align:top}
+    th{font-size:.72rem;text-transform:uppercase;color:#555}
+    .der{text-align:right}
+    .totales{margin-top:.5rem;font-size:.85rem}
+    .totales div{display:flex;justify-content:space-between;padding:.15rem 0}
+    .totales .total{font-size:1.1rem;font-weight:700;border-top:1px solid #333;margin-top:.3rem;padding-top:.35rem}
+    .pagos{font-size:.78rem;color:#444;margin-top:.6rem;border-top:1px dashed #999;padding-top:.5rem}
+    .pie{text-align:center;font-size:.75rem;color:#555;margin-top:.8rem;border-top:1px dashed #999;padding-top:.6rem}
+    .acciones{max-width:380px;margin:1rem auto 0;display:flex;gap:.6rem;justify-content:center}
+    .acciones button,.acciones a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:.5rem 1rem;border-radius:6px;border:1px solid #bbb;background:#fff;color:#111;font:inherit;text-decoration:none;cursor:pointer}
+    .acciones button{background:#1d3a30;color:#fff;border-color:#1d3a30}
+    @media print{
+      body{background:#fff;padding:0}
+      .ticket{box-shadow:none;border-radius:0;max-width:none;padding:0}
+      .acciones{display:none}
+      @page{margin:6mm}
+    }
+  </style>
+</head>
+<body>
+<div class="ticket">
+  <div class="marca">
+    {% if config.logo %}<img src="{{ config.logo.url }}" alt="">{% endif %}
+    <h1>{{ config.nombre_comercial }}</h1>
+    {% if config.razon_social %}<p>{{ config.razon_social }}</p>{% endif %}
+    {% if config.ruc %}<p>RUC {{ config.ruc }}</p>{% endif %}
+    {% if config.direccion %}<p>{{ config.direccion }}</p>{% endif %}
+    {% if config.telefono %}<p>Tel. {{ config.telefono }}</p>{% endif %}
+  </div>
+  <div class="meta">
+    <div><span>Ticket</span><strong>{{ venta.numero }}</strong></div>
+    <div><span>Fecha</span><span>{{ venta.creada|date:"d/m/Y H:i" }}</span></div>
+    <div><span>Cajero</span><span>{{ venta.cajero.nombre_completo }}</span></div>
+    <div><span>Cliente</span><span>{{ venta.cliente_nombre|default:"Consumidor final" }}</span></div>
+    {% if venta.cliente_documento %}<div><span>Documento</span><span>{{ venta.cliente_documento }}</span></div>{% endif %}
+  </div>
+  <table>
+    <thead><tr><th>Producto</th><th class="der">Cant.</th><th class="der">Importe</th></tr></thead>
+    <tbody>
+    {% for d in venta.detalles.all %}
+      <tr><td>{{ d.nombre_producto }}{% if d.observacion %}<br><small>{{ d.observacion }}</small>{% endif %}</td><td class="der">{{ d.cantidad }}</td><td class="der">{{ d.subtotal|soles }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="totales">
+    <div><span>Subtotal</span><span>{{ venta.subtotal|soles }}</span></div>
+    {% if venta.descuento %}<div><span>Descuento</span><span>- {{ venta.descuento|soles }}</span></div>{% endif %}
+    <div class="total"><span>Total</span><span>{{ venta.total|soles }}</span></div>
+    <div><span>Pagado</span><span>{{ venta.total_pagado|soles }}</span></div>
+    {% if saldo > 0 %}<div><span>Saldo pendiente</span><span>{{ saldo|soles }}</span></div>{% endif %}
+  </div>
+  <div class="pagos">
+    {% for p in venta.pagos.all %}
+    <div>{{ p.metodo.nombre }} · {{ p.monto|soles }}{% if p.referencia %} · Ref. {{ p.referencia }}{% endif %}{% if p.estado == "pendiente_verificacion" %} · POR VERIFICAR{% endif %}</div>
+    {% endfor %}
+  </div>
+  <div class="pie">¡Gracias por su compra!<br>{{ config.horario_atencion|default:"" }}</div>
+</div>
+<div class="acciones">
+  <button type="button" onclick="window.print()">Imprimir ticket</button>
+  <a href="{% url 'caja:venta_detalle' venta.pk %}">Volver a la venta</a>
+</div>
+</body>
+</html>

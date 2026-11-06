@@ -1,0 +1,14 @@
+{% extends panel_base %}
+{% block titulo %}Pedidos activos{% endblock %}
+{% block cabecera %}Pedidos activos{% endblock %}
+{% block contenido %}
+<div class="tarjeta">
+  <ul>
+    {% for p in pedidos %}
+      <li>{{ p.numero }} · Mesa {{ p.mesa.numero }} · Ronda {{ p.ronda }} · {{ p.get_estado_display }} · S/ {{ p.total }}</li>
+    {% empty %}
+      <li>Sin pedidos activos.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

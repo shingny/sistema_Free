@@ -1,0 +1,17 @@
+{% extends "base_auth.html" %}
+{% block titulo %}Iniciar sesión{% endblock %}
+{% block contenido %}
+<form method="post" class="auth-tarjeta" novalidate data-una-vez>
+  {% csrf_token %}
+  <h2>Iniciar sesión</h2>
+  {% if form.non_field_errors %}<div class="alerta alerta-error" role="alert">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>{% endif %}
+  {% include "partials/campo.html" with campo=form.username %}
+  <div class="campo{% if form.password.errors %} con-error{% endif %}">
+    <label for="{{ form.password.id_for_label }}">Contraseña</label>
+    <div class="campo-clave">{{ form.password }}<button type="button" class="btn btn-sec btn-sm" data-mostrar-clave>Mostrar</button></div>
+    {% for e in form.password.errors %}<small class="error">{{ e }}</small>{% endfor %}
+  </div>
+  <button type="submit" class="btn btn-prim btn-bloque">Entrar</button>
+  <p class="ayuda">¿Olvidaste tu contraseña? Pide al dueño que la restablezca.</p>
+</form>
+{% endblock %}

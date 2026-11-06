@@ -1,0 +1,31 @@
+{% extends panel_base %}
+{% block titulo %}Mesas{% endblock %}
+{% block cabecera %}Mesas{% endblock %}
+{% block contenido %}
+<div class="tarjeta">
+  <div class="mesas-grid">
+    {% for fila in filas %}
+      <div class="mesa-card {% if fila.ocupada %}ocupada{% else %}libre{% endif %}">
+        <strong>Mesa {{ fila.mesa.numero }}</strong>
+        {% if fila.ocupada %}
+          <span class="insignia {% if fila.cuenta.estado == 'cobro_solicitado' %}aviso{% else %}ok{% endif %}">
+            {% if fila.cuenta.estado == "cobro_solicitado" %}Cobro solicitado{% else %}Ocupada{% endif %}
+          </span>
+          <span class="mesa-total">S/ {{ fila.total }}</span>
+          <span class="mesa-meta">{{ fila.rondas }} ronda{{ fila.rondas|pluralize }}</span>
+          <a class="btn btn-sec btn-sm" href="{% url 'mesero:cuenta_detalle' fila.cuenta.pk %}">Ver cuenta</a>
+        {% else %}
+          <span class="mesa-meta">Libre · {{ fila.mesa.capacidad }} personas</span>
+          {% if puede_abrir %}
+            <form method="post" action="{% url 'mesero:mesa_abrir' fila.mesa.pk %}">{% csrf_token %}
+              <button class="btn btn-prim btn-sm" type="submit">Abrir</button>
+            </form>
+          {% endif %}
+        {% endif %}
+      </div>
+    {% empty %}
+      <p class="vacio">No hay mesas activas.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

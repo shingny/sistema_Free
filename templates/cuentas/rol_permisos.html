@@ -1,0 +1,36 @@
+{% extends panel_base %}
+{% block titulo %}Permisos de {{ rol.nombre }}{% endblock %}
+{% block cabecera %}Permisos: {{ rol.nombre }}{% endblock %}
+{% block contenido %}
+{% if rol.es_dueno %}<div class="alerta alerta-info">El rol de Dueño siempre tiene todos los permisos y no puede modificarse.</div>
+{% elif not editable %}<div class="alerta alerta-info">Estás en modo consulta: no puedes modificar los permisos de este rol.</div>{% endif %}
+{% if fuera_de_alcance %}
+<div class="alerta alerta-aviso">Este rol tiene {{ fuera_de_alcance|length }} permiso(s) que no corresponden a su función; se retirarán al guardar: {{ fuera_de_alcance|join:", " }}.</div>
+{% endif %}
+{% if not rol.es_dueno %}<p class="ayuda">Solo se muestran los módulos y permisos que corresponden al rol {{ rol.nombre }}.</p>{% endif %}
+<form method="post" data-una-vez>{% csrf_token %}
+<div class="tabla-scroll">
+<table class="tabla matriz">
+  <thead><tr><th>Módulo</th>{% for a in acciones %}<th class="centro">{{ a }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for fila in matriz %}
+    <tr><th scope="row">{{ fila.modulo }}</th>
+      {% for c in fila.celdas %}
+        <td class="centro">{% if c %}<label class="check" title="{{ c.ayuda }}"><input type="checkbox" name="permiso" value="{{ c.clave }}"{% if c.marcado %} checked{% endif %}{% if not c.habilitado %} disabled{% endif %}><span class="sr">{{ c.clave }}</span></label>{% else %}<span class="nd">·</span>{% endif %}</td>
+      {% endfor %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<ul class="leyenda">
+  <li><strong>Autorizar</strong> en Usuarios: restablecer contraseñas.</li>
+  <li><strong>Editar</strong> en Roles: cambiar permisos de roles inferiores.</li>
+  <li><strong>Reportes</strong>: exportar a CSV. Las casillas atenuadas son permisos que tú no posees y por tanto no puedes conceder.</li>
+</ul>
+<div class="acciones-form">
+  {% if editable %}<button class="btn btn-prim" type="submit">Guardar permisos</button>{% endif %}
+  <a class="btn btn-sec" href="{% url 'cuentas:roles' %}">Volver a roles</a>
+</div>
+</form>
+{% endblock %}

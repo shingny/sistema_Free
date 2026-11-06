@@ -1,0 +1,30 @@
+{% extends panel_base %}
+{% block titulo %}Mi perfil{% endblock %}
+{% block cabecera %}Mi perfil{% endblock %}
+{% block contenido %}
+<div class="rejilla-2">
+  <section class="tarjeta">
+    <h2>Mis datos</h2>
+    <form method="post" data-una-vez>{% csrf_token %}
+      <dl class="datos">
+        <dt>Usuario</dt><dd>{{ request.user.username }}</dd>
+        <dt>Rol</dt><dd>{{ request.user.rol|default:"Sin rol" }}</dd>
+        <dt>Registrado</dt><dd>{{ request.user.date_joined|date:"d/m/Y" }}</dd>
+      </dl>
+      {% include "partials/campo.html" with campo=form.first_name %}
+      {% include "partials/campo.html" with campo=form.last_name %}
+      {% include "partials/campo.html" with campo=form.email %}
+      {% include "partials/campo.html" with campo=form.telefono %}
+      <button class="btn btn-prim" type="submit">Guardar cambios</button>
+    </form>
+  </section>
+  <section class="tarjeta">
+    <h2>Seguridad</h2>
+    <p>Cambia tu contraseña con regularidad y no la compartas: cada trabajador debe usar su propia cuenta.</p>
+    <a class="btn btn-sec" href="{% url 'cuentas:cambiar_password' %}">Cambiar contraseña</a>
+    <h3>Mis permisos</h3>
+    {% if permisos %}<p class="ayuda">{{ permisos|length }} permisos activos en tu rol.</p>
+    {% else %}<p class="ayuda">Tu rol aún no tiene módulos habilitados en esta etapa del sistema.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

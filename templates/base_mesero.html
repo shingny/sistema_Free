@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block body_class %}app panel-mesero{% endblock %}
+{% block sidebar_class %}sidebar sidebar-mesero{% endblock %}
+{% block menu %}
+<ul>
+  {% for item in menu_mesero %}
+  <li><a href="{{ item.url }}" class="nav-link{% if item.activo %} activo{% endif %}"{% if item.activo %} aria-current="page"{% endif %}>
+    <svg class="ico"><use href="#i-{{ item.icono }}"/></svg>{{ item.etiqueta }}</a></li>
+  {% endfor %}
+</ul>
+{% endblock %}

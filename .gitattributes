@@ -1,0 +1,29 @@
+# Normaliza finales de línea para que el proyecto funcione igual en Windows/Linux.
+* text=auto eol=lf
+
+*.py text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.sql text eol=lf
+
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.sh text eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary

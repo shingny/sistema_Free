@@ -1,0 +1,49 @@
+{% extends panel_base %}
+{% load nucleo_tags %}
+{% block titulo %}Historial de ventas{% endblock %}
+{% block cabecera %}Historial de ventas{% endblock %}
+{% block contenido %}
+<div class="barra-acciones">
+  <form method="get" class="filtros">
+    <input type="search" name="q" value="{{ f.q }}" placeholder="Número, cliente o documento" aria-label="Buscar venta">
+    <label class="fecha">Desde <input type="date" name="desde" value="{{ f.desde }}"></label>
+    <label class="fecha">Hasta <input type="date" name="hasta" value="{{ f.hasta }}"></label>
+    <select name="metodo" aria-label="Método de pago"><option value="">Todos los métodos</option>
+      {% for m in metodos %}<option value="{{ m.pk }}"{% if f.metodo == m.pk|stringformat:"s" %} selected{% endif %}>{{ m.nombre }}</option>{% endfor %}</select>
+    <select name="estado" aria-label="Estado del pago"><option value="">Todos los estados</option>
+      {% for codigo, nombre in estados %}<option value="{{ codigo }}"{% if f.estado == codigo %} selected{% endif %}>{{ nombre }}</option>{% endfor %}</select>
+    {% if puede_ver_todo %}
+    <select name="usuario" aria-label="Cajero"><option value="">Todos los cajeros</option>
+      {% for u in usuarios %}<option value="{{ u.pk }}"{% if f.usuario == u.pk|stringformat:"s" %} selected{% endif %}>{{ u.nombre_completo }}</option>{% endfor %}</select>
+    {% endif %}
+    <button class="btn btn-sec">Filtrar</button>
+    {% if f.q or f.desde or f.hasta or f.metodo or f.estado or f.usuario %}<a class="enlace" href="{% url 'caja:historial' %}">Limpiar</a>{% endif %}
+  </form>
+</div>
+
+<div class="tabla-scroll">
+<table class="tabla">
+  <thead><tr><th>Número</th><th>Fecha</th><th>Cajero</th><th>Cliente</th><th class="der">Total</th><th>Pago</th><th>Estado</th><th><span class="sr">Acciones</span></th></tr></thead>
+  <tbody>
+  {% for v in pagina %}
+    <tr>
+      <td><strong>{{ v.numero }}</strong>{% if v.estado == "anulada" %}<br><span class="insignia off">Anulada</span>{% endif %}</td>
+      <td>{{ v.creada|date:"d/m/Y H:i" }}</td>
+      <td>{{ v.cajero.nombre_completo }}</td>
+      <td>{{ v.cliente_nombre|default:"—" }}</td>
+      <td class="der"><strong>{{ v.total|soles }}</strong>{% if v.saldo_pendiente %}<br><small>Saldo {{ v.saldo_pendiente|soles }}</small>{% endif %}</td>
+      <td>{% for p in v.pagos.all %}{{ p.metodo.nombre }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td>
+      <td>
+        {% if v.estado_pago == "pagado" %}<span class="insignia ok">Pagado</span>
+        {% elif v.estado_pago == "parcial" %}<span class="insignia aviso">Parcial</span>
+        {% elif v.estado_pago == "reembolsado" %}<span class="insignia off">Reembolsado</span>
+        {% else %}<span class="insignia neutro">Pendiente</span>{% endif %}
+      </td>
+      <td class="acciones"><a class="btn-accion" href="{% url 'caja:venta_detalle' v.pk %}">Ver</a><a class="btn-accion" href="{% url 'caja:venta_ticket' v.pk %}">Ticket</a></td>
+    </tr>
+  {% empty %}<tr><td colspan="8" class="vacio">No hay ventas con esos filtros.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% include "partials/paginacion.html" %}
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends panel_base %}
+{% block titulo %}{% if editando %}Editar usuario{% else %}Registrar trabajador{% endif %}{% endblock %}
+{% block cabecera %}{% if editando %}Editar usuario{% else %}Registrar trabajador{% endif %}{% endblock %}
+{% block contenido %}
+<section class="tarjeta formulario">
+  <form method="post" data-una-vez>{% csrf_token %}
+    {% if form.non_field_errors %}<div class="alerta alerta-error">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="rejilla-2">
+      {% include "partials/campo.html" with campo=form.first_name %}
+      {% include "partials/campo.html" with campo=form.last_name %}
+      {% include "partials/campo.html" with campo=form.documento %}
+      {% include "partials/campo.html" with campo=form.username %}
+      {% include "partials/campo.html" with campo=form.email %}
+      {% include "partials/campo.html" with campo=form.telefono %}
+      {% include "partials/campo.html" with campo=form.rol %}
+    </div>
+    {% if not editando %}<p class="ayuda">El sistema genera una contraseña temporal que verás una sola vez. El trabajador deberá cambiarla en su primer ingreso.</p>{% endif %}
+    <div class="acciones-form">
+      <button class="btn btn-prim" type="submit">{% if editando %}Guardar cambios{% else %}Registrar y generar contraseña{% endif %}</button>
+      <a class="btn btn-sec" href="{% url 'cuentas:usuarios' %}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

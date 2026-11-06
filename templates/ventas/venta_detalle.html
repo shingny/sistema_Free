@@ -1,0 +1,114 @@
+{% extends panel_base %}
+{% load nucleo_tags %}
+{% block titulo %}Venta {{ venta.numero }}{% endblock %}
+{% block cabecera %}Venta {{ venta.numero }}{% endblock %}
+{% block contenido %}
+{% if venta.estado == "anulada" %}
+<div class="alerta alerta-error">Esta venta fue anulada el {{ venta.fecha_anulacion|date:"d/m/Y H:i" }} por {{ venta.anulada_por.nombre_completo|default:"—" }}. Motivo: {{ venta.motivo_anulacion }}</div>
+{% endif %}
+<div class="barra-acciones">
+  <div class="grupo-botones">
+    <a class="btn btn-sec" href="{% url 'caja:historial' %}">Volver al historial</a>
+    <a class="btn btn-prim" href="{% url 'caja:venta_ticket' venta.pk %}">Ver / imprimir ticket</a>
+    {% if venta.pedido %}<a class="btn btn-sec" href="{% url 'caja:pedido_detalle' venta.pedido.pk %}">Ver pedido {{ venta.pedido.numero }}</a>{% endif %}
+  </div>
+</div>
+
+<div class="rejilla-2">
+  <section class="tarjeta">
+    <h2>Datos de la venta</h2>
+    <dl class="datos">
+      <dt>Número</dt><dd>{{ venta.numero }}</dd>
+      <dt>Fecha</dt><dd>{{ venta.creada|date:"d/m/Y H:i" }}</dd>
+      <dt>Cajero</dt><dd>{{ venta.cajero.nombre_completo }}</dd>
+      <dt>Caja / turno</dt><dd>{{ venta.turno.caja.nombre }} · {{ venta.turno.fecha_apertura|date:"d/m/Y H:i" }}</dd>
+      <dt>Cliente</dt><dd>{{ venta.cliente_nombre|default:"—" }}{% if venta.cliente_documento %} · {{ venta.cliente_documento }}{% endif %}</dd>
+      <dt>Teléfono</dt><dd>{{ venta.cliente_telefono|default:"—" }}</dd>
+      <dt>Observación</dt><dd>{{ venta.observacion|default:"—" }}</dd>
+    </dl>
+    <dl class="datos">
+      <dt>Subtotal</dt><dd>{{ venta.subtotal|soles }}</dd>
+      <dt>Descuento</dt><dd>{{ venta.descuento|soles }}{% if venta.descuento_motivo %} · {{ venta.descuento_motivo }}{% endif %}</dd>
+      <dt>Total</dt><dd><strong>{{ venta.total|soles }}</strong></dd>
+      <dt>Pagado</dt><dd>{{ venta.total_pagado|soles }}</dd>
+      <dt>Saldo</dt><dd><strong>{{ saldo|soles }}</strong></dd>
+      <dt>Estado del pago</dt><dd>{% if venta.estado_pago == "pagado" %}<span class="insignia ok">Pagado</span>{% elif venta.estado_pago == "parcial" %}<span class="insignia aviso">Parcial</span>{% elif venta.estado_pago == "reembolsado" %}<span class="insignia off">Reembolsado</span>{% else %}<span class="insignia neutro">Pendiente</span>{% endif %}</dd>
+    </dl>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Pagos registrados</h2>
+    <div class="tabla-scroll">
+    <table class="tabla">
+      <thead><tr><th>Método</th><th class="der">Monto</th><th>Referencia</th><th>Estado</th><th><span class="sr">Acciones</span></th></tr></thead>
+      <tbody>
+      {% for p in venta.pagos.all %}
+        <tr>
+          <td>{{ p.metodo.nombre }}</td>
+          <td class="der">{{ p.monto|soles }}</td>
+          <td>{{ p.referencia|default:"—" }}</td>
+          <td>{% if p.estado == "verificado" %}<span class="insignia ok">Verificado</span>{% elif p.estado == "pendiente_verificacion" %}<span class="insignia aviso">Por verificar</span>{% elif p.estado == "rechazado" %}<span class="insignia off">Rechazado</span>{% else %}<span class="insignia off">Reembolsado</span>{% endif %}</td>
+          <td class="acciones">
+            {% if p.estado == "pendiente_verificacion" and puede_verificar %}
+            <form method="post" action="{% url 'caja:pago_verificar' p.pk %}">{% csrf_token %}<button class="enlace">Verificar</button></form>
+            <form method="post" action="{% url 'caja:pago_rechazar' p.pk %}" data-confirmar="El pago quedará rechazado y la venta mantendrá su saldo." data-titulo="¿Rechazar este pago?">{% csrf_token %}<button class="enlace peligro">Rechazar</button></form>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}<tr><td colspan="5" class="vacio">Todavía no hay pagos registrados.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    </div>
+
+    {% if venta.total_en_verificacion %}
+    <p class="ayuda">Hay {{ venta.total_en_verificacion|soles }} en pagos pendientes de verificación. Saldo disponible para un nuevo pago: <strong>{{ saldo_disponible|soles }}</strong>.</p>
+    {% endif %}
+    {% if puede_pagar and saldo > 0 %}
+    <h3>Registrar otro pago</h3>
+    <form method="post" action="{% url 'caja:venta_pago' venta.pk %}">{% csrf_token %}
+      <div class="rejilla-2">
+        {% include "partials/campo.html" with campo=pago_form.metodo %}
+        {% include "partials/campo.html" with campo=pago_form.monto %}
+        {% include "partials/campo.html" with campo=pago_form.referencia %}
+        {% include "partials/campo.html" with campo=pago_form.observacion %}
+      </div>
+      <button class="btn btn-prim" type="submit">Registrar pago</button>
+    </form>
+    {% endif %}
+  </section>
+</div>
+
+<section class="tarjeta">
+  <h2>Productos vendidos</h2>
+  <div class="tabla-scroll">
+  <table class="tabla">
+    <thead><tr><th>Producto</th><th class="der">Precio unitario</th><th class="centro">Cantidad</th><th class="der">Subtotal</th></tr></thead>
+    <tbody>
+    {% for d in venta.detalles.all %}
+      <tr><td><strong>{{ d.nombre_producto }}</strong>{% if d.observacion %}<br><small>{{ d.observacion }}</small>{% endif %}</td><td class="der">{{ d.precio_unitario|soles }}</td><td class="centro">{{ d.cantidad }}</td><td class="der">{{ d.subtotal|soles }}</td></tr>
+    {% empty %}<tr><td colspan="4" class="vacio">Sin detalles.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+{% if puede_anular %}
+<section class="tarjeta">
+  <h2>Anular venta</h2>
+  <p class="ayuda">La anulación conserva la venta y registra el motivo en auditoría. Si hubo pagos en efectivo, se registrará la devolución en la caja del turno.</p>
+  <form method="post" action="{% url 'caja:venta_anular' venta.pk %}" data-confirmar="La venta quedará anulada y no podrá volver a modificarse." data-titulo="¿Anular la venta {{ venta.numero }}?" data-boton="Anular">{% csrf_token %}
+    {% include "partials/campo.html" with campo=anulacion_form.motivo %}
+    <button class="btn btn-peligro" type="submit">Anular venta</button>
+  </form>
+</section>
+{% endif %}
+
+{% if movimientos %}
+<section class="tarjeta">
+  <h2>Movimientos de caja de esta venta</h2>
+  <ul class="lista-simple">
+    {% for m in movimientos %}<li><span>{{ m.get_tipo_display }} · {{ m.descripcion }}</span><strong>{{ m.monto|soles }}</strong></li>{% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

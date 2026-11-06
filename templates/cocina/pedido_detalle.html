@@ -1,0 +1,49 @@
+{% extends panel_base %}
+{% block titulo %}Pedido {{ pedido.numero }}{% endblock %}
+{% block cabecera %}Pedido {{ pedido.numero }}{% endblock %}
+{% block contenido %}
+<div class="barra-acciones">
+  <a class="btn btn-sec" href="{% url 'cocina:tablero' %}">Volver al tablero</a>
+  {% if puede_actualizar and siguiente %}
+  <form method="post" action="{% url 'cocina:avanzar' pedido.pk %}">{% csrf_token %}
+    <button class="btn btn-prim" type="submit">
+      {% if siguiente == "en_preparacion" %}Iniciar preparación{% elif siguiente == "listo" %}Marcar listo{% else %}Marcar entregado{% endif %}
+    </button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="rejilla-2">
+  <section class="tarjeta">
+    <h2>Datos del pedido</h2>
+    <dl class="datos">
+      <dt>Número</dt><dd>{{ pedido.numero }}</dd>
+      <dt>Fecha</dt><dd>{{ pedido.creado|date:"d/m/Y H:i" }}</dd>
+      <dt>Origen</dt><dd>{{ pedido.get_origen_display }}</dd>
+      <dt>Mesa</dt><dd>{{ pedido.mesa|default:"&mdash;" }}</dd>
+      <dt>Estado</dt><dd>{{ pedido.get_estado_display }}</dd>
+      <dt>Cliente</dt><dd>{{ pedido.cliente_nombre|default:"&mdash;" }}</dd>
+      <dt>Observación</dt><dd>{{ pedido.observacion|default:"&mdash;" }}</dd>
+    </dl>
+  </section>
+  <section class="tarjeta">
+    <h2>Preparación</h2>
+    <p class="ayuda">Actualiza el estado cuando el pedido pase por cocina.</p>
+    <p><strong>Estado actual:</strong> {{ pedido.get_estado_display }}</p>
+  </section>
+</div>
+
+<section class="tarjeta">
+  <h2>Productos</h2>
+  <div class="tabla-scroll">
+    <table class="tabla">
+      <thead><tr><th>Producto</th><th class="centro">Cantidad</th><th>Observación</th></tr></thead>
+      <tbody>
+      {% for d in pedido.detalles.all %}
+        <tr><td><strong>{{ d.nombre_producto }}</strong></td><td class="centro">{{ d.cantidad }}</td><td>{{ d.observacion|default:"&mdash;" }}</td></tr>
+      {% empty %}<tr><td colspan="3" class="vacio">Sin productos.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

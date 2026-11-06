@@ -1,0 +1,41 @@
+{% extends panel_base %}
+{% load nucleo_tags %}
+{% block titulo %}Cajas y turnos{% endblock %}
+{% block cabecera %}Cajas y turnos{% endblock %}
+{% block contenido %}
+<div class="barra-acciones">
+  <form method="get" class="filtros">
+    <label class="fecha">Desde <input type="date" name="desde" value="{{ f.desde }}"></label>
+    <label class="fecha">Hasta <input type="date" name="hasta" value="{{ f.hasta }}"></label>
+    <select name="estado" aria-label="Estado"><option value="">Todos los estados</option>
+      {% for codigo, nombre in estados %}<option value="{{ codigo }}"{% if f.estado == codigo %} selected{% endif %}>{{ nombre }}</option>{% endfor %}</select>
+    <select name="usuario" aria-label="Cajero"><option value="">Todos los cajeros</option>
+      {% for u in usuarios %}<option value="{{ u.pk }}"{% if f.usuario == u.pk|stringformat:"s" %} selected{% endif %}>{{ u.nombre_completo }}</option>{% endfor %}</select>
+    <button class="btn btn-sec">Filtrar</button>
+    {% if f.desde or f.hasta or f.estado or f.usuario %}<a class="enlace" href="{% url 'ventas:cajas' %}">Limpiar</a>{% endif %}
+  </form>
+</div>
+
+<div class="tabla-scroll">
+<table class="tabla">
+  <thead><tr><th>Caja</th><th>Cajero</th><th>Apertura</th><th>Cierre</th><th class="der">Inicial</th><th class="der">Esperado</th><th class="der">Contado</th><th class="der">Diferencia</th><th>Estado</th><th><span class="sr">Acciones</span></th></tr></thead>
+  <tbody>
+  {% for t in pagina %}
+    <tr>
+      <td><strong>{{ t.caja.nombre }}</strong></td>
+      <td>{{ t.usuario.nombre_completo }}</td>
+      <td>{{ t.fecha_apertura|date:"d/m/Y H:i" }}</td>
+      <td>{{ t.fecha_cierre|date:"d/m/Y H:i"|default:"—" }}</td>
+      <td class="der">{{ t.monto_inicial|soles }}</td>
+      <td class="der">{% if t.efectivo_esperado is None %}—{% else %}{{ t.efectivo_esperado|soles }}{% endif %}</td>
+      <td class="der">{% if t.monto_contado is None %}—{% else %}{{ t.monto_contado|soles }}{% endif %}</td>
+      <td class="der">{% if t.diferencia is None %}—{% elif t.diferencia == 0 %}<span class="insignia ok">0.00</span>{% else %}{{ t.diferencia|soles }}{% endif %}</td>
+      <td>{% if t.estado == "abierta" %}<span class="insignia ok">Abierta</span>{% else %}<span class="insignia off">Cerrada</span>{% endif %}</td>
+      <td class="acciones"><a class="btn btn-prim btn-sm" href="{% url 'ventas:caja_movimientos' %}?turno={{ t.pk }}">Movimientos</a><a class="btn btn-prim btn-sm" href="{% url 'ventas:caja_cerrar' %}?turno={{ t.pk }}">Cierre</a></td>
+    </tr>
+  {% empty %}<tr><td colspan="10" class="vacio">No hay turnos con esos filtros.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% include "partials/paginacion.html" %}
+{% endblock %}

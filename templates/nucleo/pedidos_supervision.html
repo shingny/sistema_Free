@@ -1,0 +1,26 @@
+{% extends panel_base %}
+{% block titulo %}Supervisión de pedidos{% endblock %}
+{% block cabecera %}Supervisión de pedidos{% endblock %}
+{% block contenido %}
+<div class="tarjeta">
+  <p>Pedidos activos: {{ pedidos_activos }} · Cancelados: {{ pedidos_cancelados }} · Tiempo promedio de preparación: {{ tiempo_promedio }} min</p>
+  <h3>Por estado</h3>
+  <ul>{% for e in por_estado %}<li>{{ e.estado }}: {{ e.n }}</li>{% endfor %}</ul>
+  <h3>Por modalidad</h3>
+  <ul>{% for m in por_modalidad %}<li>{{ m.origen }}: {{ m.n }} (S/ {{ m.total }})</li>{% endfor %}</ul>
+  <h3>Actividad de meseros</h3>
+  <ul>{% for m in meseros %}<li>{{ m.creado_por__first_name }} {{ m.creado_por__last_name }}: {{ m.pedidos }} pedidos (S/ {{ m.total }})</li>{% endfor %}</ul>
+</div>
+<div class="tarjeta">
+  <table class="tabla">
+    <thead><tr><th>Número</th><th>Mesa</th><th>Origen</th><th>Estado</th><th>Total</th><th>Creado por</th></tr></thead>
+    <tbody>
+      {% for p in pagina.object_list %}
+        <tr><td>{{ p.numero }}</td><td>{{ p.mesa|default:"-" }}</td><td>{{ p.get_origen_display }}</td><td>{{ p.get_estado_display }}</td><td>S/ {{ p.total }}</td><td>{{ p.creado_por.nombre_completo }}</td></tr>
+      {% empty %}
+        <tr><td colspan="6">Sin pedidos.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

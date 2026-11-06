@@ -1,0 +1,21 @@
+{% extends panel_base %}
+{% block titulo %}{% if editando %}Editar método de pago{% else %}Nuevo método de pago{% endif %}{% endblock %}
+{% block cabecera %}{% if editando %}Editar método de pago{% else %}Nuevo método de pago{% endif %}{% endblock %}
+{% block contenido %}
+<section class="tarjeta formulario">
+  <form method="post">{% csrf_token %}
+    <div class="rejilla-2">
+      {% include "partials/campo.html" with campo=form.nombre %}
+      {% include "partials/campo.html" with campo=form.codigo %}
+      {% include "partials/campo.html" with campo=form.orden %}
+    </div>
+    <div class="campo"><label class="check-linea">{{ form.afecta_efectivo }} Afecta el efectivo físico</label><small class="ayuda">Marca esta opción para efectivo o cualquier medio que entre físicamente a la caja.</small></div>
+    <div class="campo"><label class="check-linea">{{ form.requiere_verificacion }} Requiere verificación</label><small class="ayuda">Para transferencias, Yape/Plin u otros pagos que deben ser confirmados por el dueño o un administrador.</small></div>
+    <div class="campo"><label class="check-linea">{{ form.activo }} Activo</label></div>
+    <div class="acciones-form">
+      <button class="btn btn-prim" type="submit">Guardar método</button>
+      <a class="btn btn-sec" href="{% url 'ventas:metodos_pago' %}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

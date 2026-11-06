@@ -1,0 +1,63 @@
+{% extends panel_base %}
+{% block titulo %}Mesa {{ mesa.numero }}{% endblock %}
+{% block cabecera %}Mesa {{ mesa.numero }}{% endblock %}
+{% block contenido %}
+<div class="tarjeta">
+  <h2 style="margin:0 0 1rem 0;">Mesa {{ mesa.numero }}</h2>
+
+  {% if cuenta %}
+  <div class="tarjeta-cab">
+    <h3 style="margin:0;">Productos de la cuenta</h3>
+    <button class="btn btn-prim btn-sm" type="button" onclick="toggleDetalles(this)">Ver detalles</button>
+  </div>
+  <div id="detalles-productos" class="detalles-ocultos" style="margin-top:.75rem;">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>Ronda</th><th>Producto</th><th>Cantidad</th><th>Precio unit.</th><th>Subtotal</th><th>Estado</th><th>Observación</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in pedidos %}
+          {% for d in p.detalles.all %}
+          <tr>
+            <td>{{ p.ronda }}</td>
+            <td>{{ d.nombre_producto }}</td>
+            <td class="centro">{{ d.cantidad }}</td>
+            <td class="der">S/ {{ d.precio_unitario|floatformat:2 }}</td>
+            <td class="der">S/ {{ d.subtotal|floatformat:2 }}</td>
+            <td>
+              {% if p.estado == "pendiente" %}<span class="insignia aviso">Pendiente</span>
+              {% elif p.estado == "en_preparacion" %}<span class="insignia aviso">En preparación</span>
+              {% elif p.estado == "listo" %}<span class="insignia ok">Listo</span>
+              {% elif p.estado == "entregado" %}<span class="insignia ok">Entregado</span>
+              {% else %}<span class="insignia off">Cancelado</span>{% endif %}
+            </td>
+            <td>{{ d.observacion|default:"-" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="vacio">Sin productos registrados en esta ronda.</td></tr>
+          {% endfor %}
+        {% empty %}
+        <tr><td colspan="7" class="vacio">La cuenta no tiene productos registrados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+<script>
+function toggleDetalles(btn) {
+  var seccion = document.getElementById("detalles-productos");
+  if (seccion.classList.contains("detalles-ocultos")) {
+    seccion.classList.remove("detalles-ocultos");
+    seccion.classList.add("detalles-visibles");
+    btn.textContent = "Ocultar detalles";
+  } else {
+    seccion.classList.remove("detalles-visibles");
+    seccion.classList.add("detalles-ocultos");
+    btn.textContent = "Ver detalles";
+  }
+}
+</script>
+{% endblock %}

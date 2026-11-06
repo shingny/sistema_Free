@@ -1,0 +1,9 @@
+{% extends "base_auth.html" %}
+{% block titulo %}Sin permiso{% endblock %}
+{% block contenido %}
+<div class="auth-tarjeta">
+  <h2>No tienes permiso para esto</h2>
+  <p class="ayuda">Tu rol no incluye esta acción. Si la necesitas, pídesela al dueño del negocio.</p>
+  <a class="btn btn-prim" href="{% url 'nucleo:inicio' %}">Volver al inicio</a>
+</div>
+{% endblock %}

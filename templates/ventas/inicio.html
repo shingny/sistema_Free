@@ -1,0 +1,45 @@
+{% extends panel_base %}
+{% load nucleo_tags %}
+{% block titulo %}Inicio de caja{% endblock %}
+{% block cabecera %}Inicio de caja{% endblock %}
+{% block contenido %}
+<div class="barra-acciones">
+  <p class="intro">Bienvenido, {{ request.user.nombre_completo }}. Desde aquí puedes abrir tu turno, vender y controlar tu caja.</p>
+  <div class="grupo-botones">
+    {% if puede_crear and turno %}<a class="btn btn-prim" href="{% url 'caja:nueva_venta' %}">Nueva venta</a>{% endif %}
+    {% if not turno %}<a class="btn btn-prim" href="{% url 'caja:caja_abrir' %}">Abrir caja</a>{% endif %}
+  </div>
+</div>
+
+{% if turno %}
+<div class="alerta alerta-info">Turno abierto en <strong>{{ turno.caja.nombre }}</strong> desde {{ turno.fecha_apertura|date:"d/m/Y H:i" }}. Efectivo esperado: <strong>{{ turno.efectivo_calculado|soles }}</strong>.</div>
+{% else %}
+<div class="alerta alerta-aviso">No tienes un turno de caja abierto. Ábrelo antes de registrar ventas.</div>
+{% endif %}
+
+<div class="indicadores">
+  <div class="indicador"><span class="valor">{{ operaciones_hoy }}</span><span class="etiqueta">Ventas de hoy</span><small>Operaciones registradas por ti</small></div>
+  <div class="indicador"><span class="valor">{{ total_hoy|soles }}</span><span class="etiqueta">Total vendido hoy</span><small>Solo ventas registradas</small></div>
+  <div class="indicador"><span class="valor">{{ pedidos_abiertos|length }}</span><span class="etiqueta">Pedidos en curso</span><small>Pendientes, en preparación o listos</small></div>
+</div>
+
+<div class="rejilla-2">
+  <section class="tarjeta">
+    <div class="tarjeta-cab"><h2>Pedidos en curso</h2><a class="enlace" href="{% url 'caja:pedidos' %}">Ver todos</a></div>
+    <ul class="linea-tiempo">
+      {% for p in pedidos_abiertos %}
+      <li><span class="hora">{{ p.creado|date:"H:i" }}</span><span><a href="{% url 'caja:pedido_detalle' p.pk %}">{{ p.numero }}</a> · {{ p.get_estado_display }}{% if p.cliente_nombre %} · {{ p.cliente_nombre }}{% endif %}</span></li>
+      {% empty %}<li class="vacio">No hay pedidos en curso.</li>{% endfor %}
+    </ul>
+  </section>
+  <section class="tarjeta">
+    <h2>Accesos rápidos</h2>
+    <ul class="lista-simple">
+      <li><a href="{% url 'caja:historial' %}">Historial de ventas</a></li>
+      <li><a href="{% url 'caja:caja_movimientos' %}">Movimientos de caja</a></li>
+      <li><a href="{% url 'caja:caja_cerrar' %}">Cierre de caja</a></li>
+      <li><a href="{% url 'caja:pedidos' %}">Pedidos para llevar</a></li>
+    </ul>
+  </section>
+</div>
+{% endblock %}

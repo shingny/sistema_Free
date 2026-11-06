@@ -1,0 +1,20 @@
+{% load static %}<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Acceso{% endblock %} · {{ config.nombre_comercial }}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20261105f">
+</head>
+<body class="auth">
+  <main class="auth-caja">
+    <div class="auth-marca">
+      {% if config.logo %}<img src="{{ config.logo.url }}" alt="" class="brand-logo grande">
+      {% else %}<span class="brand-mark grande" aria-hidden="true">{{ config.nombre_comercial|slice:":1" }}</span>{% endif %}
+      <h1>{{ config.nombre_comercial }}</h1>
+    </div>
+    {% block contenido %}{% endblock %}
+  </main>
+  <script src="{% static 'js/app.js' %}" defer></script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+{% extends panel_base %}
+{% block titulo %}Cuenta mesa {{ cuenta.mesa.numero }}{% endblock %}
+{% block cabecera %}Mesa {{ cuenta.mesa.numero }}{% endblock %}
+{% block contenido %}
+<div class="tarjeta">
+  <div class="mesero-mesa-info">
+    <div>
+      <h2>Mesa {{ cuenta.mesa.numero }}</h2>
+      <p class="ayuda">Cliente: {{ cuenta.cliente_nombre|default:"-" }} · Mesero: {{ cuenta.mesero.nombre_completo }}</p>
+    </div>
+    <div>
+      {% if cuenta.estado == "abierta" %}<span class="insignia ok">Abierta</span>
+      {% elif cuenta.estado == "cobro_solicitado" %}<span class="insignia aviso">Cobro solicitado</span>
+      {% elif cuenta.estado == "cerrada" %}<span class="insignia neutro">Cerrada</span>
+      {% else %}<span class="insignia off">Cancelada</span>{% endif %}
+      {% if venta %}
+        <span class="insignia {% if venta.estado_pago == 'pagado' %}ok{% elif venta.estado_pago == 'parcial' %}aviso{% else %}neutro{% endif %}">
+          Pago: {{ venta.get_estado_pago_display }}
+        </span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="mesero-resumen">
+    <div><span>Consumo total</span><strong>S/ {{ total }}</strong></div>
+    <div><span>Rondas</span><strong>{{ pedidos_activos|length }}</strong></div>
+    <div><span>Abierta</span><strong>{{ cuenta.abierta|date:"H:i" }}</strong></div>
+  </div>
+</div>
+
+<div class="tarjeta">
+  <h3>Platos consumidos</h3>
+  {% if pedidos_activos %}
+    <table class="tabla">
+      <thead>
+        <tr><th>Ronda</th><th>Producto</th><th>Cant.</th><th>P. unit.</th><th>Subtotal</th><th>Estado</th><th>Observación</th></tr>
+      </thead>
+      <tbody>
+        {% for pedido in pedidos %}
+          {% if pedido.estado != "cancelado" %}
+            {% for d in pedido.detalles.all %}
+              <tr>
+                <td>{{ pedido.ronda }}</td>
+                <td>{{ d.nombre_producto }}</td>
+                <td>{{ d.cantidad }}</td>
+                <td>S/ {{ d.precio_unitario }}</td>
+                <td>S/ {{ d.subtotal }}</td>
+                <td>
+                  {% if pedido.estado == "pendiente" %}<span class="insignia neutro">Pendiente</span>
+                  {% elif pedido.estado == "en_preparacion" %}<span class="insignia aviso">En preparación</span>
+                  {% elif pedido.estado == "listo" %}<span class="insignia ok">Listo</span>
+                  {% else %}<span class="insignia neutro">Entregado</span>{% endif %}
+                </td>
+                <td>{{ d.observacion|default:"-" }}</td>
+              </tr>
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="vacio">La mesa aún no tiene consumos. Agrega productos para enviarlos a cocina.</p>
+  {% endif %}
+</div>
+
+{% if puede_agregar %}
+<details class="tarjeta" {% if not pedidos_activos %}open{% endif %}>
+  <summary><strong>{% if pedidos_activos %}Agregar otra ronda{% else %}Agregar productos{% endif %}</strong></summary>
+  <form method="post" action="{% url 'mesero:cuenta_agregar' cuenta.pk %}" id="form-agregar">
+    {% csrf_token %}
+    <input type="hidden" name="items" id="items-json" value="[]">
+    <div class="rejilla-2">
+      <div class="campo"><label for="prioridad">Prioridad</label>
+        <select name="prioridad" id="prioridad">
+          <option value="normal">Normal</option>
+          <option value="alta">Alta</option>
+          <option value="urgente">Urgente</option>
+        </select>
+      </div>
+      <div class="campo"><label for="observacion">Observación</label>
+        <input type="text" name="observacion" id="observacion" maxlength="300" placeholder="Ej. sin cebolla, término medio">
+      </div>
+    </div>
+    {% for cat in categorias %}
+      {% if cat.disponibles %}
+        <section class="mesero-categoria">
+          <h4>{{ cat.nombre }}</h4>
+          <div class="productos-grid">
+            {% for prod in cat.disponibles %}
+              <label class="producto-item">
+                {% if prod.imagen %}<img src="{{ prod.imagen.url }}" alt="" loading="lazy">{% endif %}
+                <input type="checkbox" class="prod-check" data-id="{{ prod.pk }}" data-nombre="{{ prod.nombre }}">
+                <span class="producto-nombre">{{ prod.nombre }}</span>
+                <span class="producto-precio">S/ {{ prod.precio }}</span>
+                <input type="number" min="1" max="999" step="1" value="1" inputmode="numeric" class="prod-cant" data-id="{{ prod.pk }}" aria-label="Cantidad de {{ prod.nombre }}">
+              </label>
+            {% endfor %}
+          </div>
+        </section>
+      {% endif %}
+    {% empty %}
+      <p class="vacio">No hay productos disponibles.</p>
+    {% endfor %}
+    <button class="btn btn-prim" type="submit" onclick="return prepararItems();">Enviar a cocina</button>
+  </form>
+</details>
+{% endif %}
+
+<div class="tarjeta acciones">
+  {% if puede_solicitar_cobro %}
+    <form method="post" action="{% url 'mesero:cuenta_cobrar' cuenta.pk %}" style="display:inline">{% csrf_token %}
+      <button class="btn btn-prim" type="submit">Solicitar cobro</button>
+    </form>
+  {% endif %}
+  {% if cuenta.estado == "cobro_solicitado" %}
+    <span class="insignia aviso">Cobro solicitado. Caja procesará el pago de la mesa.</span>
+  {% endif %}
+  {% if puede_liberar %}
+    <form method="post" action="{% url 'mesero:cuenta_cerrar' cuenta.pk %}" style="display:inline">{% csrf_token %}
+      <button class="btn btn-sec" type="submit">Liberar mesa</button>
+    </form>
+  {% endif %}
+  <a class="btn btn-sec" href="{% url 'mesero:mesas' %}">Volver a mesas</a>
+</div>
+
+<script>
+(function () {
+  var endpoint = "{% url 'mesero:cuenta_json' cuenta.pk %}";
+  var inicial = null;
+  function revisar() {
+    fetch(endpoint, {credentials: "same-origin"})
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var firma = JSON.stringify(data);
+        if (inicial === null) { inicial = firma; return; }
+        if (firma !== inicial) { window.location.reload(); }
+      }).catch(function () {});
+  }
+  setInterval(revisar, 10000);
+})();
+</script>
+<script>
+function prepararItems() {
+  const items = [];
+  document.querySelectorAll('.prod-check:checked').forEach(cb => {
+    const id = cb.dataset.id;
+    const cantInput = document.querySelector('.prod-cant[data-id="' + id + '"]');
+    const cant = parseInt(cantInput.value || '1', 10);
+    if (cant > 0) items.push({producto_id: parseInt(id, 10), cantidad: cant});
+  });
+  if (items.length === 0) { alert('Selecciona al menos un producto.'); return false; }
+  document.getElementById('items-json').value = JSON.stringify(items);
+  return true;
+}
+</script>
+{% endblock %}

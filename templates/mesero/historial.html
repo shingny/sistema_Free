@@ -1,0 +1,17 @@
+{% extends panel_base %}
+{% block titulo %}Historial{% endblock %}
+{% block cabecera %}Historial de pedidos{% endblock %}
+{% block contenido %}
+<div class="tarjeta">
+  <table class="tabla">
+    <thead><tr><th>Número</th><th>Mesa</th><th>Ronda</th><th>Estado</th><th>Total</th></tr></thead>
+    <tbody>
+      {% for p in pagina.object_list %}
+        <tr><td>{{ p.numero }}</td><td>{{ p.mesa.numero }}</td><td>{{ p.ronda }}</td><td>{{ p.get_estado_display }}</td><td>S/ {{ p.total }}</td></tr>
+      {% empty %}
+        <tr><td colspan="5">Sin historial.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

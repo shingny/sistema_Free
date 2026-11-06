@@ -1,0 +1,60 @@
+{% extends panel_base %}
+{% block titulo %}Usuarios{% endblock %}
+{% block cabecera %}Usuarios{% endblock %}
+{% block contenido %}
+<div class="barra-acciones">
+  <form method="get" class="filtros">
+    <input type="search" name="q" value="{{ f.q }}" placeholder="Buscar por nombre, usuario o documento" aria-label="Buscar">
+    <select name="rol" aria-label="Filtrar por rol"><option value="">Todos los roles</option>
+      {% for r in roles %}<option value="{{ r.pk }}"{% if f.rol == r.pk|stringformat:"s" %} selected{% endif %}>{{ r.nombre }}</option>{% endfor %}
+    </select>
+    <select name="estado" aria-label="Filtrar por estado">
+      <option value="">Todos los estados</option>
+      <option value="activo"{% if f.estado == "activo" %} selected{% endif %}>Activos</option>
+      <option value="inactivo"{% if f.estado == "inactivo" %} selected{% endif %}>Inactivos</option>
+    </select>
+    <button class="btn btn-sec">Filtrar</button>
+    {% if f.q or f.rol or f.estado %}<a class="enlace" href="{% url 'cuentas:usuarios' %}">Limpiar</a>{% endif %}
+  </form>
+  {% if 'usuarios.crear' in permisos %}<a class="btn btn-prim" href="{% url 'cuentas:usuario_crear' %}">Registrar trabajador</a>{% endif %}
+</div>
+
+<div class="tabla-scroll">
+<table class="tabla">
+  <thead><tr><th>Trabajador</th><th>Usuario</th><th>Documento</th><th>Rol</th><th>Estado</th><th>Registro</th><th><span class="sr">Acciones</span></th></tr></thead>
+  <tbody>
+  {% for u in pagina %}
+    <tr>
+      <td><strong>{{ u.nombre_completo }}</strong><br><small>{{ u.email|default:"" }}{% if u.email and u.telefono %} · {% endif %}{{ u.telefono }}</small></td>
+      <td>{{ u.username }}</td>
+      <td>{{ u.documento|default:"—" }}</td>
+      <td>{{ u.rol|default:"Sin rol" }}</td>
+      <td>{% if u.is_active %}<span class="insignia ok">Activo</span>{% else %}<span class="insignia off">Inactivo</span>{% endif %}
+          {% if u.debe_cambiar_password %}<span class="insignia aviso">Clave temporal</span>{% endif %}</td>
+      <td>{{ u.date_joined|date:"d/m/Y" }}</td>
+      <td class="acciones">
+        {% if u.pk == request.user.pk %}
+          <a class="btn-accion" href="{% url 'cuentas:perfil' %}">Mi perfil</a>
+        {% else %}
+          {% if 'auditoria.ver' in permisos %}<a class="btn-accion" href="{% url 'nucleo:actividad' %}?usuario={{ u.pk }}">Actividad</a>{% endif %}
+          {% if u.gestionable %}
+            {% if 'usuarios.editar' in permisos %}<a class="btn-accion" href="{% url 'cuentas:usuario_editar' u.pk %}">Editar</a>{% endif %}
+            {% if 'usuarios.autorizar' in permisos %}
+            <form method="post" action="{% url 'cuentas:usuario_restablecer' u.pk %}" data-confirmar="Se generará una contraseña temporal y se cerrará la sesión de {{ u.nombre_completo }}." data-titulo="¿Restablecer contraseña?" data-boton="Restablecer">{% csrf_token %}
+              <button class="btn-accion">Restablecer clave</button></form>{% endif %}
+            {% if 'usuarios.desactivar' in permisos %}
+            <form method="post" action="{% url 'cuentas:usuario_estado' u.pk %}"
+              {% if u.is_active %}data-confirmar="{{ u.nombre_completo }} no podrá ingresar y su sesión se cerrará." data-titulo="¿Desactivar usuario?" data-boton="Desactivar"{% endif %}>{% csrf_token %}
+              <button class="btn-accion{% if u.is_active %} peligro{% endif %}">{% if u.is_active %}Desactivar{% else %}Activar{% endif %}</button></form>{% endif %}
+          {% endif %}
+        {% endif %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="7" class="vacio">No hay usuarios con esos filtros.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% include "partials/paginacion.html" %}
+{% endblock %}

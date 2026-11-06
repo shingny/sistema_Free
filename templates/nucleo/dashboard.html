@@ -1,0 +1,109 @@
+{% extends panel_base %}
+{% load nucleo_tags %}
+{% block titulo %}Dashboard{% endblock %}
+{% block cabecera %}Dashboard{% endblock %}
+{% block contenido %}
+{% if pendientes %}
+<div class="alerta alerta-aviso">Falta completar en la configuración: <strong>{{ pendientes|join:", " }}</strong>.
+  {% if 'configuracion.ver' in permisos %}<a class="enlace" href="{% url 'nucleo:configuracion' %}">Completar ahora</a>{% endif %}</div>
+{% endif %}
+
+{% if puede_ventas %}
+<form method="get" class="filtros" style="margin-bottom:1rem">
+  <label class="fecha">Desde <input type="date" name="desde" value="{{ desde }}"></label>
+  <label class="fecha">Hasta <input type="date" name="hasta" value="{{ hasta }}"></label>
+  <button class="btn btn-sec">Consultar periodo</button>
+  <a class="enlace" href="{% url 'nucleo:dashboard' %}">Hoy</a>
+</form>
+
+<div class="indicadores">
+  <div class="indicador"><span class="valor">{{ total_vendido|soles }}</span><span class="etiqueta">Ventas del periodo</span><small>{{ operaciones }} operaciones registradas</small></div>
+  <div class="indicador"><span class="valor">{{ efectivo|soles }}</span><span class="etiqueta">Cobrado en efectivo</span><small>Solo pagos verificados</small></div>
+  <div class="indicador"><span class="valor">{{ electronico|soles }}</span><span class="etiqueta">Cobrado electrónico</span><small>Tarjeta, transferencia y otros</small></div>
+</div>
+<div class="indicadores">
+  <div class="indicador"><span class="valor">{{ cajas_abiertas }}</span><span class="etiqueta">Cajas abiertas</span><small>{{ cajas_cerradas }} cierres en el periodo</small></div>
+  <div class="indicador"><span class="valor">{{ diferencia_total|soles }}</span><span class="etiqueta">Diferencia de caja</span><small>{{ turnos_con_diferencia }} turnos con diferencia</small></div>
+  <div class="indicador"><span class="valor">{{ pedidos_abiertos }}</span><span class="etiqueta">Pedidos en curso</span><small>Pendientes, en preparación o listos</small></div>
+</div>
+
+<div class="rejilla-2">
+  <section class="tarjeta">
+    <div class="tarjeta-cab"><h2>Ventas por cajero</h2>{% if 'caja.supervisar' in permisos %}<a class="enlace" href="{% url 'ventas:cajas' %}">Ver cajas</a>{% endif %}</div>
+    <div class="tabla-scroll">
+    <table class="tabla">
+      <thead><tr><th>Cajero</th><th class="centro">Operaciones</th><th class="der">Total</th></tr></thead>
+      <tbody>
+      {% for v in ventas_por_cajero %}
+        <tr><td>{{ v.cajero__first_name }} {{ v.cajero__last_name }}<br><small>{{ v.cajero__username }}</small></td><td class="centro">{{ v.operaciones }}</td><td class="der"><strong>{{ v.total|soles }}</strong></td></tr>
+      {% empty %}<tr><td colspan="3" class="vacio">No hay ventas en el periodo.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </section>
+  <section class="tarjeta">
+    <h2>Resumen de configuración</h2>
+    <dl class="datos">
+      <dt>Negocio</dt><dd>{{ config.nombre_comercial }}</dd>
+      <dt>Dirección</dt><dd>{{ config.direccion|default:"Sin registrar" }}</dd>
+      <dt>Teléfono</dt><dd>{{ config.telefono|default:"Sin registrar" }}</dd>
+      <dt>Moneda</dt><dd>{{ config.get_moneda_display }}</dd>
+      <dt>Zona horaria</dt><dd>{{ config.get_zona_horaria_display }}</dd>
+    </dl>
+    <h3>Usuarios activos por rol</h3>
+    <ul class="lista-simple">{% for r in por_rol %}<li><span>{{ r.nombre }}</span><strong>{{ r.n }}</strong></li>{% endfor %}</ul>
+  </section>
+</div>
+{% else %}
+<div class="indicadores">
+  <div class="indicador"><span class="valor">{{ usuarios_activos }}</span><span class="etiqueta">Usuarios activos</span><small>{{ total_usuarios }} registrados en total</small></div>
+  <div class="indicador"><span class="valor">{{ productos_activos }}</span><span class="etiqueta">Productos activos</span><small>{{ productos_total }} en la carta</small></div>
+  <div class="indicador"><span class="valor">{{ categorias_total }}</span><span class="etiqueta">Categorías</span><small>{{ categorias_activas }} activas</small></div>
+</div>
+<div class="rejilla-2">
+  <section class="tarjeta">
+    <h2>Resumen de configuración</h2>
+    <dl class="datos">
+      <dt>Negocio</dt><dd>{{ config.nombre_comercial }}</dd>
+      <dt>Dirección</dt><dd>{{ config.direccion|default:"Sin registrar" }}</dd>
+      <dt>Teléfono</dt><dd>{{ config.telefono|default:"Sin registrar" }}</dd>
+      <dt>Moneda</dt><dd>{{ config.get_moneda_display }}</dd>
+      <dt>Zona horaria</dt><dd>{{ config.get_zona_horaria_display }}</dd>
+    </dl>
+  </section>
+  <section class="tarjeta">
+    <h2>Actividad reciente</h2>
+    <p class="vacio">Tu rol no incluye reportes de ventas.</p>
+  </section>
+</div>
+{% endif %}
+
+<div class="rejilla-2">
+  <section class="tarjeta">
+    <div class="tarjeta-cab"><h2>Actividad reciente</h2>
+      {% if 'auditoria.ver' in permisos %}<a class="enlace" href="{% url 'nucleo:actividad' %}">Ver toda</a>{% endif %}</div>
+    {% if 'auditoria.ver' not in permisos %}<p class="vacio">Tu rol no incluye la consulta de actividad.</p>
+    {% else %}
+    <ul class="linea-tiempo">
+      {% for a in actividad %}
+      <li><span class="hora">{{ a.fecha|date:"d/m H:i" }}</span><span><strong>{{ a.usuario_nombre|default:"Sistema" }}</strong> · {{ a.descripcion|default:a.accion|truncatechars:80 }}</span></li>
+      {% empty %}<li class="vacio">Todavía no hay actividad registrada.</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+  <section class="tarjeta">
+    <h2>Accesos rápidos</h2>
+    <ul class="lista-simple">
+      {% if 'ventas.crear' in permisos %}<li><a href="{% url 'ventas:nueva_venta' %}">Nueva venta</a></li>{% endif %}
+      {% if 'ventas.ver' in permisos %}<li><a href="{% url 'ventas:historial' %}">Historial de ventas</a></li>{% endif %}
+      {% if 'pedidos.ver' in permisos %}<li><a href="{% url 'ventas:pedidos' %}">Pedidos</a></li>{% endif %}
+      {% if 'caja.supervisar' in permisos %}<li><a href="{% url 'ventas:cajas' %}">Cajas y turnos</a></li>{% endif %}
+      {% if 'configuracion.ver' in permisos %}<li><a href="{% url 'nucleo:configuracion' %}">Configuración general</a></li>{% endif %}
+    </ul>
+  </section>
+</div>
+
+<div class="rejilla-3 futuros">
+  <section class="tarjeta reservado"><h3>Inventario</h3><p>Aún no forma parte del alcance definido.</p></section>
+</div>
+{% endblock %}

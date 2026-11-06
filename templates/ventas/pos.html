@@ -1,0 +1,245 @@
+{% extends panel_base %}
+{% load static nucleo_tags l10n %}
+{% block titulo %}Nueva venta{% endblock %}
+{% block cabecera %}Nueva venta{% endblock %}
+{% block contenido %}
+<div class="pos">
+  <section class="pos-catalogo">
+    <div class="pos-buscador">
+      <input type="search" id="buscar-producto" placeholder="Buscar producto por nombre" aria-label="Buscar producto">
+      <div class="pos-categorias">
+        <button type="button" class="chip-filtro activo" data-filtro-categoria="">Todos</button>
+        {% for c in categorias %}<button type="button" class="chip-filtro" data-filtro-categoria="{{ c.pk }}">{{ c.nombre }}</button>{% endfor %}
+      </div>
+    </div>
+
+    {% for c in categorias %}
+      {% if c.disponibles %}
+      <div class="pos-grupo" data-grupo-categoria="{{ c.pk }}">
+        <h2>{{ c.nombre }}</h2>
+        <div class="pos-productos">
+          {% for p in c.disponibles %}
+          <button type="button" class="pos-producto" data-producto data-id="{{ p.pk }}" data-nombre="{{ p.nombre }}" data-precio="{{ p.precio|unlocalize }}" data-categoria-id="{{ c.pk }}" aria-label="Agregar {{ p.nombre }} al carrito">
+            <span class="pos-foto">
+              {% if p.imagen %}<img src="{{ p.imagen.url }}" alt="" loading="lazy" decoding="async">{% else %}<span class="pos-sin-foto" aria-hidden="true">{{ p.nombre|slice:":1" }}</span>{% endif %}
+            </span>
+            <span class="pos-agregar" aria-hidden="true">+</span>
+            <span class="pos-nombre">{{ p.nombre }}</span>
+            <span class="pos-precio">{{ p.precio|soles }}</span>
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    {% empty %}
+      <p class="vacio">No hay productos disponibles. Revisa la carta en el panel administrativo.</p>
+    {% endfor %}
+  </section>
+
+  <aside class="pos-carrito">
+    <h2>Carrito <span class="pos-contador" id="pos-contador">0</span><button type="button" class="pos-limpiar" id="pos-limpiar">Limpiar</button></h2>
+    <div class="pos-lineas" id="pos-lineas"><p class="vacio">Agrega productos para comenzar.</p></div>
+
+    <form method="post" id="pos-form">{% csrf_token %}
+      <input type="hidden" name="items" id="items" value="{{ items_json }}">
+      <input type="hidden" name="token" value="{{ token }}">
+      <div class="pos-totales">
+        <div><span>Subtotal</span><strong id="subtotal">{{ 0|soles }}</strong></div>
+        {% if puede_descontar %}
+        <div class="pos-descuento">
+          <label for="descuento">Descuento (S/)</label>
+          <input type="number" name="descuento" id="descuento" min="0" step="0.01" value="0" inputmode="decimal">
+          <input type="text" name="descuento_motivo" id="descuento_motivo" placeholder="Motivo del descuento" maxlength="200">
+        </div>
+        {% endif %}
+        <div class="pos-total"><span>Total</span><strong id="total">{{ 0|soles }}</strong></div>
+        <div class="pos-saldo"><span>Saldo con el monto ingresado</span><strong id="saldo">{{ 0|soles }}</strong></div>
+      </div>
+
+      <div class="rejilla-2">
+        <div class="campo"><label for="cliente_nombre">Cliente (opcional)</label><input type="text" name="cliente_nombre" id="cliente_nombre" maxlength="120" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ' .-]{1,}" title="Solo letras, espacios, apóstrofos, puntos y guiones." autocomplete="off" autocapitalize="words"></div>
+        <div class="campo"><label for="cliente_documento">Documento (opcional)</label><input type="text" name="cliente_documento" id="cliente_documento" maxlength="20" pattern="\d{6,20}" title="Solo números (entre 6 y 20 dígitos)." inputmode="numeric" autocomplete="off"></div>
+        <div class="campo"><label for="cliente_telefono">Teléfono (opcional)</label><input type="tel" name="cliente_telefono" id="cliente_telefono" maxlength="20" pattern="[0-9+][0-9+\s()-]{5,19}" title="Solo números, +, espacios, paréntesis y guiones." autocomplete="off"></div>
+        <div class="campo"><label for="observacion">Observación (opcional)</label><input type="text" name="observacion" id="observacion" maxlength="300"></div>
+      </div>
+
+      <div class="rejilla-2">
+        <div class="campo"><label for="origen">Modalidad</label>
+          <select name="origen" id="origen">
+            <option value="para_llevar">Para llevar</option>
+            <option value="salon">Salón</option>
+          </select>
+        </div>
+        <div class="campo" id="campo-mesa" hidden><label for="mesa">Mesa</label>
+          <select name="mesa" id="mesa">
+            {% for m in mesas %}<option value="{{ m.pk }}">{{ m }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="campo" id="campo-cobrar" hidden>
+          <label><input type="checkbox" name="cobrar_ahora" id="cobrar_ahora" value="1"> Cobrar ahora</label>
+          <small class="ayuda">Si no cobras ahora, el pedido quedará pendiente de pago.</small>
+        </div>
+      </div>
+
+      <fieldset class="pos-pago" id="pos-pago">
+        <legend>Pago</legend>
+        <div class="campo"><label for="metodo">Método de pago <span class="req">*</span></label>
+          <select name="metodo" id="metodo" required>
+            {% for m in metodos %}<option value="{{ m.pk }}" data-verifica="{{ m.requiere_verificacion|yesno:'1,0' }}">{{ m.nombre }}</option>{% endfor %}
+          </select>
+          <small class="ayuda" id="ayuda-metodo"></small>
+        </div>
+        <div class="campo"><label for="monto">Monto recibido (S/) <span class="req">*</span></label>
+          <input type="number" name="monto" id="monto" min="0.01" step="0.01" value="0" required>
+        </div>
+        <div class="campo"><label for="referencia">Referencia (opcional)</label><input type="text" name="referencia" id="referencia" maxlength="100"></div>
+      </fieldset>
+
+      <button class="btn btn-prim btn-bloque" type="submit" id="confirmar-venta">Confirmar venta</button>
+    </form>
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  "use strict";
+  var cart = {};
+  var lineas = document.getElementById("pos-lineas");
+  var contador = document.getElementById("pos-contador");
+  var itemsInput = document.getElementById("items");
+  var subtotalEl = document.getElementById("subtotal");
+  var totalEl = document.getElementById("total");
+  var saldoEl = document.getElementById("saldo");
+  var descuentoInput = document.getElementById("descuento");
+  var montoInput = document.getElementById("monto");
+  var metodo = document.getElementById("metodo");
+  var ayuda = document.getElementById("ayuda-metodo");
+  var origen = document.getElementById("origen");
+  var mesa = document.getElementById("mesa");
+  var campoMesa = document.getElementById("campo-mesa");
+  var campoCobrar = document.getElementById("campo-cobrar");
+  var cobrar = document.getElementById("cobrar_ahora");
+  var pagoFieldset = document.getElementById("pos-pago");
+  var referenciaInput = document.getElementById("referencia");
+
+  function actualizarModalidad() {
+    var esSalon = origen && origen.value === "salon";
+    campoMesa.hidden = !esSalon;
+    campoCobrar.hidden = !esSalon;
+    var pagar = !esSalon || (cobrar && cobrar.checked);
+    pagoFieldset.hidden = !pagar;
+    if (metodo) metodo.disabled = !pagar;
+    montoInput.disabled = !pagar;
+    if (referenciaInput) referenciaInput.disabled = !pagar;
+  }
+
+  function soles(n) { return "S/ " + (Number(n) || 0).toFixed(2); }
+  function total() { return Object.keys(cart).reduce(function (s, k) { return s + cart[k].precio * cart[k].cantidad; }, 0); }
+  function descuento() { return descuentoInput ? Math.min(Number(descuentoInput.value) || 0, total()) : 0; }
+  function totalFinal() { return Math.max(total() - descuento(), 0); }
+
+  function render() {
+    var ids = Object.keys(cart);
+    var unidades = ids.reduce(function (s, k) { return s + cart[k].cantidad; }, 0);
+    if (contador) contador.textContent = unidades;
+    if (!ids.length) {
+      lineas.innerHTML = '<p class="vacio">Agrega productos para comenzar.</p>';
+    } else {
+      lineas.innerHTML = ids.map(function (id) {
+        var l = cart[id];
+        return '<div class="pos-linea"><div><strong>' + l.nombre + '</strong><small>' + soles(l.precio) + ' c/u</small></div>' +
+          '<div class="pos-cantidad"><button type="button" data-menos="' + id + '" aria-label="Quitar uno">−</button><span>' + l.cantidad + '</span><button type="button" data-mas="' + id + '" aria-label="Agregar uno">+</button></div>' +
+          '<strong>' + soles(l.precio * l.cantidad) + '</strong>' +
+          '<button type="button" class="pos-quitar" data-quitar="' + id + '" aria-label="Quitar producto">×</button></div>';
+      }).join("");
+    }
+    itemsInput.value = JSON.stringify(ids.map(function (id) {
+      return { producto_id: Number(id), cantidad: cart[id].cantidad };
+    }));
+    subtotalEl.textContent = soles(total());
+    totalEl.textContent = soles(totalFinal());
+    saldoEl.textContent = soles(Math.max(totalFinal() - (Number(montoInput.value) || 0), 0));
+    if (!montoInput.dataset.tocado) montoInput.value = totalFinal().toFixed(2);
+  }
+
+  function agregar(id, nombre, precio) {
+    var valor = Number(String(precio).replace(",", ".")) || 0;
+    cart[id] = cart[id] || { nombre: nombre, precio: valor, cantidad: 0 };
+    cart[id].cantidad += 1;
+    render();
+  }
+
+  document.querySelectorAll("[data-producto]").forEach(function (b) {
+    b.addEventListener("click", function () { agregar(b.dataset.id, b.dataset.nombre, Number(b.dataset.precio)); });
+  });
+  lineas.addEventListener("click", function (e) {
+    var mas = e.target.closest("[data-mas]"), menos = e.target.closest("[data-menos]"), quitar = e.target.closest("[data-quitar]");
+    if (quitar) { delete cart[quitar.dataset.quitar]; render(); return; }
+    if (mas) { cart[mas.dataset.mas].cantidad += 1; render(); }
+    if (menos) {
+      var id = menos.dataset.menos;
+      cart[id].cantidad -= 1;
+      if (cart[id].cantidad <= 0) delete cart[id];
+      render();
+    }
+  });
+  var limpiar = document.getElementById("pos-limpiar");
+  if (limpiar) limpiar.addEventListener("click", function () { cart = {}; render(); });
+  document.querySelectorAll("[data-filtro-categoria]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll("[data-filtro-categoria]").forEach(function (x) { x.classList.remove("activo"); });
+      b.classList.add("activo");
+      var cat = b.dataset.filtroCategoria;
+      document.querySelectorAll("[data-grupo-categoria]").forEach(function (g) {
+        g.hidden = cat !== "" && g.dataset.grupoCategoria !== cat;
+      });
+    });
+  });
+  var buscar = document.getElementById("buscar-producto");
+  if (buscar) buscar.addEventListener("input", function () {
+    var q = buscar.value.toLowerCase().trim();
+    document.querySelectorAll("[data-producto]").forEach(function (p) {
+      p.hidden = q && p.dataset.nombre.toLowerCase().indexOf(q) === -1;
+    });
+  });
+  if (descuentoInput) descuentoInput.addEventListener("input", render);
+  montoInput.addEventListener("input", function () { montoInput.dataset.tocado = "1"; saldoEl.textContent = soles(Math.max(totalFinal() - (Number(montoInput.value) || 0), 0)); });
+  function actualizarAyuda() {
+    var op = metodo.options[metodo.selectedIndex];
+    ayuda.textContent = op && op.dataset.verifica === "1" ? "Este pago quedará pendiente de verificación por el dueño o un administrador." : "";
+  }
+  if (metodo) { metodo.addEventListener("change", actualizarAyuda); actualizarAyuda(); }
+  if (origen) origen.addEventListener("change", actualizarModalidad);
+  if (cobrar) cobrar.addEventListener("change", actualizarModalidad);
+  actualizarModalidad();
+  document.getElementById("pos-form").addEventListener("submit", function (e) {
+    if (!Object.keys(cart).length) { e.preventDefault(); alert("Agrega al menos un producto a la venta."); return; }
+    var esSalon = origen && origen.value === "salon";
+    if (esSalon && (!mesa || !mesa.value)) { e.preventDefault(); alert("Selecciona una mesa para el pedido de salón."); return; }
+    var pagar = !esSalon || (cobrar && cobrar.checked);
+    if (pagar && Number(montoInput.value) <= 0) { e.preventDefault(); alert("Ingresa el monto del pago."); return; }
+    if (pagar && Number(montoInput.value) > totalFinal() + 0.001) { e.preventDefault(); alert("El pago no puede superar el total."); }
+    itemsInput.value = JSON.stringify(Object.keys(cart).map(function (id) {
+      return { producto_id: Number(id), cantidad: cart[id].cantidad };
+    }));
+  });
+
+  try {
+    var iniciales = JSON.parse(itemsInput.value || "[]");
+    if (Array.isArray(iniciales)) {
+      iniciales.forEach(function (it) {
+        var card = document.querySelector('[data-producto][data-id="' + it.producto_id + '"]');
+        if (card) {
+          var id = card.dataset.id;
+          cart[id] = cart[id] || { nombre: card.dataset.nombre, precio: Number(card.dataset.precio), cantidad: 0 };
+          cart[id].cantidad += Number(it.cantidad) || 1;
+        }
+      });
+    }
+  } catch (e) { /* carrito vacío */ }
+  render();
+})();
+</script>
+{% endblock %}

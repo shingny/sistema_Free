@@ -1,0 +1,55 @@
+{% extends panel_base %}
+{% load nucleo_tags %}
+{% block titulo %}Movimientos de caja{% endblock %}
+{% block cabecera %}Movimientos de caja{% endblock %}
+{% block contenido %}
+<div class="barra-acciones">
+  <div>
+    <p class="intro">Caja <strong>{{ turno.caja.nombre }}</strong> · turno de {{ turno.usuario.nombre_completo }} · {{ turno.fecha_apertura|date:"d/m/Y H:i" }}.</p>
+  </div>
+  <div class="grupo-botones">
+    {% if turno.estado == "abierta" %}<a class="btn btn-sec" href="{% url 'caja:caja_cerrar' %}">Cerrar caja</a>{% endif %}
+    <a class="btn btn-prim" href="{% url 'caja:nueva_venta' %}">Nueva venta</a>
+  </div>
+</div>
+
+<div class="indicadores">
+  <div class="indicador"><span class="valor">{{ turno.monto_inicial|soles }}</span><span class="etiqueta">Monto inicial</span></div>
+  <div class="indicador"><span class="valor">{{ esperado|soles }}</span><span class="etiqueta">Efectivo esperado</span><small>Inicial + ingresos - egresos - devoluciones</small></div>
+  <div class="indicador"><span class="valor">{{ turno.get_estado_display }}</span><span class="etiqueta">Estado del turno</span></div>
+</div>
+
+<div class="rejilla-2">
+  <section class="tarjeta">
+    <h2>Movimientos</h2>
+    <div class="tabla-scroll">
+    <table class="tabla">
+      <thead><tr><th>Hora</th><th>Tipo</th><th>Descripción</th><th class="der">Monto</th></tr></thead>
+      <tbody>
+      {% for m in movimientos %}
+        <tr>
+          <td>{{ m.creado|date:"H:i" }}</td>
+          <td>{{ m.get_tipo_display }}</td>
+          <td>{{ m.descripcion }}{% if m.venta %}<br><small>{{ m.venta.numero }}</small>{% endif %}</td>
+          <td class="der">{% if m.tipo == "egreso" or m.tipo == "devolucion" %}- {% endif %}{{ m.monto|soles }}</td>
+        </tr>
+      {% empty %}<tr><td colspan="4" class="vacio">Sin movimientos.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Registrar ingreso o egreso</h2>
+    {% if puede_mover %}
+    <p class="ayuda">Los movimientos manuales afectan el efectivo físico. Todo movimiento queda auditado.</p>
+    <form method="post">{% csrf_token %}
+      {% include "partials/campo.html" with campo=form.tipo %}
+      {% include "partials/campo.html" with campo=form.monto %}
+      {% include "partials/campo.html" with campo=form.descripcion %}
+      <button class="btn btn-prim" type="submit">Registrar movimiento</button>
+    </form>
+    {% else %}<p class="vacio">El turno está cerrado o tu rol no puede registrar movimientos.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

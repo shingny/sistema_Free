@@ -1,0 +1,14 @@
+{% extends panel_base %}
+{% block titulo %}{% if editando %}Editar categoría{% else %}Nueva categoría{% endif %}{% endblock %}
+{% block cabecera %}{% if editando %}Editar categoría{% else %}Nueva categoría{% endif %}{% endblock %}
+{% block contenido %}
+<section class="tarjeta formulario">
+  <form method="post" data-una-vez>{% csrf_token %}
+    {% include "partials/campo.html" with campo=form.nombre %}
+    {% include "partials/campo.html" with campo=form.descripcion %}
+    {% include "partials/campo.html" with campo=form.orden %}
+    <div class="acciones-form"><button class="btn btn-prim" type="submit">Guardar</button>
+      <a class="btn btn-sec" href="{% url 'catalogo:categorias' %}">Cancelar</a></div>
+  </form>
+</section>
+{% endblock %}

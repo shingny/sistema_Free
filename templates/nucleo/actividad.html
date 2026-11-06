@@ -1,0 +1,43 @@
+{% extends panel_base %}
+{% load nucleo_tags %}
+{% block titulo %}Actividad{% endblock %}
+{% block cabecera %}Actividad y auditoría{% endblock %}
+{% block contenido %}
+<div class="barra-acciones">
+  <form method="get" class="filtros">
+    <input type="search" name="q" value="{{ f.q }}" placeholder="Buscar en la descripción" aria-label="Buscar">
+    <select name="usuario" aria-label="Usuario"><option value="">Todos los usuarios</option>
+      {% for u in usuarios %}<option value="{{ u.pk }}"{% if f.usuario == u.pk|stringformat:"s" %} selected{% endif %}>{{ u.nombre_completo }}</option>{% endfor %}</select>
+    <select name="modulo" aria-label="Módulo"><option value="">Todos los módulos</option>
+      {% for m in modulos %}<option value="{{ m }}"{% if f.modulo == m %} selected{% endif %}>{{ m|capfirst }}</option>{% endfor %}</select>
+    <select name="accion" aria-label="Acción"><option value="">Todas las acciones</option>
+      {% for codigo, nombre in acciones.items %}<option value="{{ codigo }}"{% if f.accion == codigo %} selected{% endif %}>{{ nombre }}</option>{% endfor %}</select>
+    <label class="fecha">Desde <input type="date" name="desde" value="{{ f.desde }}"></label>
+    <label class="fecha">Hasta <input type="date" name="hasta" value="{{ f.hasta }}"></label>
+    <button class="btn btn-sec">Filtrar</button>
+    <a class="enlace" href="{% url 'nucleo:actividad' %}">Limpiar</a>
+  </form>
+  {% if puede_exportar %}<a class="btn btn-sec" href="{% url 'nucleo:actividad_exportar' %}?{{ qs }}">Exportar CSV</a>{% endif %}
+</div>
+<div class="tabla-scroll">
+<table class="tabla">
+  <thead><tr><th>Fecha y hora (Lima)</th><th>Usuario</th><th>Acción</th><th>Detalle</th><th>IP</th></tr></thead>
+  <tbody>
+  {% for r in pagina %}
+    <tr>
+      <td>{{ r.fecha|date:"d/m/Y H:i:s" }}</td>
+      <td>{{ r.usuario_nombre|default:"—" }}</td>
+      <td><span class="insignia neutro">{{ r.accion|etiqueta_accion }}</span></td>
+      <td>{{ r.descripcion }}
+        {% if r.antes or r.despues %}<details class="cambios"><summary>Ver cambios</summary>
+          <div class="dif"><div><strong>Antes</strong>{% if r.antes %}<ul>{% for k, v in r.antes.items %}<li><em>{{ k }}</em>: {{ v }}</li>{% endfor %}</ul>{% else %}<p>—</p>{% endif %}</div>
+          <div><strong>Después</strong>{% if r.despues %}<ul>{% for k, v in r.despues.items %}<li><em>{{ k }}</em>: {{ v }}</li>{% endfor %}</ul>{% else %}<p>—</p>{% endif %}</div></div>
+        </details>{% endif %}</td>
+      <td>{{ r.ip|default:"—" }}</td>
+    </tr>
+  {% empty %}<tr><td colspan="5" class="vacio">No hay actividad con esos filtros.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% include "partials/paginacion.html" %}
+{% endblock %}

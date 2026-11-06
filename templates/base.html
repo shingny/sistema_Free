@@ -1,0 +1,95 @@
+{% load static %}<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Panel{% endblock %} · {{ config.nombre_comercial }}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20261105f">
+</head>
+<body class="{% block body_class %}app{% endblock %}">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14.5c3 0 5 1.8 5 5"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.5 3.5-7 8-7s8 2.5 8 7"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4M16 8l4 4-4 4M20 12H9"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-cart" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M3 4h2l2.4 10.2a1 1 0 0 0 1 .8h8.7a1 1 0 0 0 1-.8L21 8H7"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></symbol>
+    <symbol id="i-cash" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+    <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4z"/><path d="M13 5v14"/></symbol>
+    <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 4v16M6 14l6 6 6-6"/></symbol>
+    <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 20V4M6 10l6-6 6 6"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+  </defs>
+</svg>
+
+<div class="shell">
+  <aside class="{% block sidebar_class %}sidebar{% endblock %}" id="sidebar" aria-label="Menú principal">
+    <div class="brand">
+      {% if config.logo %}<img src="{{ config.logo.url }}" alt="" class="brand-logo">
+      {% else %}<span class="brand-mark" aria-hidden="true">{{ config.nombre_comercial|slice:":1" }}</span>{% endif %}
+      <span class="brand-name">{{ config.nombre_comercial }}</span>
+    </div>
+    <nav>
+      {% block menu %}
+      <ul>
+        {% for item in menu %}
+        <li><a href="{{ item.url }}" class="nav-link{% if item.activo %} activo{% endif %}"{% if item.activo %} aria-current="page"{% endif %}>
+          <svg class="ico"><use href="#i-{{ item.icono }}"/></svg>{{ item.etiqueta }}</a></li>
+        {% endfor %}
+      </ul>
+      {% endblock %}
+      <ul class="nav-pie">
+        <li><a href="{% url 'cuentas:perfil' %}" class="nav-link{% if perfil_activo %} activo{% endif %}">
+          <svg class="ico"><use href="#i-user"/></svg>Mi perfil</a></li>
+        <li>
+          <form method="post" action="{% url 'cuentas:logout' %}">{% csrf_token %}
+            <button type="submit" class="nav-link nav-boton"><svg class="ico"><use href="#i-logout"/></svg>Cerrar sesión</button>
+          </form>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+  <div class="velo" id="velo"></div>
+
+  <div class="main">
+    <header class="topbar">
+      <button type="button" class="btn-icono menu-toggle" id="menu-toggle" aria-label="Abrir menú" aria-controls="sidebar">
+        <svg class="ico"><use href="#i-menu"/></svg>
+      </button>
+      <h1 class="topbar-titulo">{% block cabecera %}{% endblock %}</h1>
+      <a href="{% url 'cuentas:perfil' %}" class="chip-usuario">
+        <span class="avatar" aria-hidden="true">{{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}</span>
+        <span class="chip-texto"><strong>{{ request.user.nombre_completo }}</strong><small>{{ request.user.rol|default:"Sin rol" }}</small></span>
+      </a>
+    </header>
+
+    <div class="toasts" id="toasts" aria-live="polite">
+      {% for m in messages %}<div class="toast toast-{{ m.tags }}" role="status">{{ m }}</div>{% endfor %}
+    </div>
+
+    <main class="contenido">{% block contenido %}{% endblock %}</main>
+  </div>
+</div>
+
+<dialog id="confirmar" class="modal" aria-labelledby="confirmar-titulo">
+  <form method="dialog" class="modal-caja">
+    <h2 id="confirmar-titulo">¿Confirmas la acción?</h2>
+    <p id="confirmar-texto"></p>
+    <div class="modal-acciones">
+      <button value="cancelar" class="btn btn-sec">Cancelar</button>
+      <button value="ok" class="btn btn-peligro" id="confirmar-ok">Confirmar</button>
+    </div>
+  </form>
+</dialog>
+<script src="{% static 'js/app.js' %}?v=20261105e" defer></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

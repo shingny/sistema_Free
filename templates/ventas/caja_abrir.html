@@ -1,0 +1,32 @@
+{% extends panel_base %}
+{% load nucleo_tags %}
+{% block titulo %}Apertura de caja{% endblock %}
+{% block cabecera %}Apertura de caja{% endblock %}
+{% block contenido %}
+{% if turno %}
+<section class="tarjeta">
+  <h2>Ya tienes un turno abierto</h2>
+  <dl class="datos">
+    <dt>Caja</dt><dd>{{ turno.caja.nombre }}</dd>
+    <dt>Apertura</dt><dd>{{ turno.fecha_apertura|date:"d/m/Y H:i" }}</dd>
+    <dt>Monto inicial</dt><dd>{{ turno.monto_inicial|soles }}</dd>
+    <dt>Efectivo esperado</dt><dd>{{ turno.efectivo_calculado|soles }}</dd>
+  </dl>
+  <div class="grupo-botones">
+    <a class="btn btn-prim" href="{% url 'caja:caja_movimientos' %}">Ver movimientos</a>
+    <a class="btn btn-sec" href="{% url 'caja:caja_cerrar' %}">Cerrar caja</a>
+    <a class="btn btn-sec" href="{% url 'caja:nueva_venta' %}">Nueva venta</a>
+  </div>
+</section>
+{% else %}
+<section class="tarjeta formulario">
+  <p class="intro">Antes de vender, registra el monto inicial de tu caja. Al cerrar el turno se comparará el efectivo esperado con el dinero contado.</p>
+  <form method="post">{% csrf_token %}
+    {% include "partials/campo.html" with campo=form.caja %}
+    {% include "partials/campo.html" with campo=form.monto_inicial %}
+    {% include "partials/campo.html" with campo=form.observacion %}
+    <div class="acciones-form"><button class="btn btn-prim" type="submit">Abrir turno</button></div>
+  </form>
+</section>
+{% endif %}
+{% endblock %}
