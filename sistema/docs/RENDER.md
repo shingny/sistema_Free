@@ -22,7 +22,7 @@ Archivos ya preparados:
 ## 1. Subir el proyecto a GitHub
 
 Sigue [GITHUB.md](GITHUB.md). El repositorio puede ser público; no subas
-`.env`, `.env.alwaysdata`, `db.sqlite3` ni `backups/`. Las imágenes de `media/`
+`.env`, `db.sqlite3` ni `backups/`. Las imágenes de `media/`
 **sí** se versionan.
 
 ## 2. Crear el Project y el Web Service en Render
@@ -110,11 +110,10 @@ Desde tu PC (con acceso remoto habilitado), sigue
 [ALWAYSDATA.md](ALWAYSDATA.md), pasos 1 a 5:
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\migrar_sqlite_a_mysql.py --env .env.alwaysdata --check
+.\.venv\Scripts\python.exe scripts\migrar_sqlite_a_mysql.py --check
 .\.venv\Scripts\python.exe scripts\backup_sqlite.py
-$env:ENV_FILE=".env.alwaysdata"
 .\.venv\Scripts\python.exe manage.py migrate
-.\.venv\Scripts\python.exe scripts\migrar_sqlite_a_mysql.py --env .env.alwaysdata --yes
+.\.venv\Scripts\python.exe scripts\migrar_sqlite_a_mysql.py --yes
 .\.venv\Scripts\python.exe manage.py inicializar
 ```
 

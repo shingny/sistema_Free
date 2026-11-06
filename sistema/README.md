@@ -5,15 +5,18 @@ Paneles de dueño, caja y cocina: autenticación, usuarios, roles y permisos
 apertura/cierre de caja, POS para llevar y salón, mesas, pagos, pedidos, envío a
 cocina e historial.
 
-**Stack:** Python 3.11+ / Django 5, HTML, CSS y JavaScript. En local se usa
-SQLite; en producción, MySQL/MariaDB mediante **PyMySQL**. Los archivos
-estáticos se sirven con **WhiteNoise**. La aplicación web está preparada para
-desplegarse en **Render** con Gunicorn.
+**Stack:** Python 3.11+ / Django 5, HTML, CSS y JavaScript. La base de datos es
+MySQL/MariaDB (Alwaysdata) mediante **PyMySQL**; SQLite queda como alternativa
+local sin conexión. Los archivos estáticos se sirven con **WhiteNoise**. La
+aplicación web está preparada para desplegarse en **Render** con Gunicorn.
 
 > El código vive en la carpeta `sistema/` del repositorio. Entra ahí antes de
 > ejecutar los comandos: `cd sistema`.
 
-## Puesta en marcha local (SQLite)
+## Puesta en marcha local
+
+La base se define en `.env` (MySQL de Alwaysdata por defecto, o SQLite si pones
+`DB_ENGINE=sqlite`).
 
 ```powershell
 cd sistema
@@ -42,26 +45,25 @@ Paneles disponibles:
 
 ## Base de datos en Alwaysdata (MySQL/MariaDB)
 
-El proyecto ya está preparado para Alwaysdata. Los datos reales de host y base
-están en `.env.alwaysdata` (ignorado por Git); la plantilla pública
-`.env.alwaysdata.example` usa marcadores de posición.
+El proyecto ya está preparado para Alwaysdata. Los datos de conexión van en
+`.env` (ignorado por Git); la plantilla pública `.env.example` usa marcadores de
+posición.
 
 Pasos resumidos:
 
 ```powershell
-# 1. Abre .env.alwaysdata (ya tiene host/base) y completa usuario, contraseña y SECRET_KEY
+# 1. Completa en .env DB_USER, DB_PASSWORD y SECRET_KEY
 # 2. Instala dependencias
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 
 # 3. Comprueba la conexión
-.\.venv\Scripts\python.exe scripts\migrar_sqlite_a_mysql.py --env .env.alwaysdata --check
+.\.venv\Scripts\python.exe scripts\migrar_sqlite_a_mysql.py --check
 
 # 4. Crea el esquema en MySQL
-$env:ENV_FILE=".env.alwaysdata"
 .\.venv\Scripts\python.exe manage.py migrate
 
 # 5. Copia los datos de SQLite (conserva IDs y relaciones)
-.\.venv\Scripts\python.exe scripts\migrar_sqlite_a_mysql.py --env .env.alwaysdata --yes
+.\.venv\Scripts\python.exe scripts\migrar_sqlite_a_mysql.py --yes
 .\.venv\Scripts\python.exe manage.py inicializar
 .\.venv\Scripts\python.exe manage.py collectstatic --noinput
 ```
@@ -85,7 +87,10 @@ Guía completa: [docs/RENDER.md](docs/RENDER.md).
 
 ## Pruebas
 
+Las pruebas usan SQLite para no crear una base de prueba en Alwaysdata:
+
 ```powershell
+$env:DB_ENGINE="sqlite"
 .\.venv\Scripts\python.exe manage.py test
 ```
 
@@ -117,4 +122,4 @@ GitHub Actions ejecuta las pruebas con SQLite en cada push o pull request
 - Para asignar fotos por nombre, déjalas en `imagenes/` y ejecuta `manage.py cargar_imagenes_productos`.
 - Si prefieres no versionarlas, usa un disco persistente de Render (`MEDIA_ROOT=/var/data/media`) o almacenamiento externo.
 - Copias de seguridad de la base y de `media/`.
-- Nunca subir `.env`, `.env.alwaysdata`, `db.sqlite3` ni `backups/`.
+- Nunca subir `.env`, `db.sqlite3` ni `backups/`.

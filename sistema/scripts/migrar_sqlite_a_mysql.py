@@ -1,14 +1,14 @@
 """Copia los datos de db.sqlite3 a una base MySQL/MariaDB ya migrada.
 
-Uso típico en Alwaysdata:
+Uso típico:
 
-    python scripts/migrar_sqlite_a_mysql.py --env .env.alwaysdata --check
-    python scripts/migrar_sqlite_a_mysql.py --env .env.alwaysdata --dry-run
-    python scripts/migrar_sqlite_a_mysql.py --env .env.alwaysdata --yes
+    python scripts/migrar_sqlite_a_mysql.py --check
+    python scripts/migrar_sqlite_a_mysql.py --dry-run
+    python scripts/migrar_sqlite_a_mysql.py --yes
 
 Antes de ejecutarlo, la base destino debe tener el esquema creado:
 
-    ENV_FILE=.env.alwaysdata python manage.py migrate
+    python manage.py migrate
 
 El script:
 - conserva los IDs originales;
@@ -175,7 +175,7 @@ def main() -> int:
     faltantes = [t for t in tablas if t not in destino]
     if faltantes:
         print("Faltan tablas en MySQL. Ejecuta primero:")
-        print("  ENV_FILE=.env.alwaysdata python manage.py migrate")
+        print("  python manage.py migrate")
         for t in faltantes:
             print(f"  - {t}")
         return 1
@@ -246,7 +246,7 @@ def main() -> int:
 
     mysql_conn.close()
     print(f"\nMigración completada: {total:,} filas copiadas.")
-    print("Siguiente paso: ejecuta `python manage.py inicializar` con el mismo ENV_FILE.")
+    print("Siguiente paso: ejecuta `python manage.py inicializar`.")
     return 0
 
 

@@ -16,7 +16,7 @@ datos reales.
 
 Estos ya están en `.gitignore`:
 
-- `.env` y `.env.alwaysdata` (contraseñas y `SECRET_KEY`);
+- `.env` (contraseñas y `SECRET_KEY`);
 - `db.sqlite3` y `backups/`;
 - `staticfiles/` (se genera con `collectstatic`);
 - `.venv/`, `__pycache__/`, `*.pyc`.
@@ -30,7 +30,7 @@ Comprueba antes del primer commit:
 
 ```powershell
 git status --short
-git check-ignore -v .env .env.alwaysdata db.sqlite3 backups
+git check-ignore -v .env db.sqlite3 backups
 ```
 
 Si `git status` muestra `.env`, `db.sqlite3` o `backups/`, no hagas commit: revisa
@@ -47,7 +47,7 @@ git branch -M main
 ```
 
 Revisa `git status` antes del commit. Debe aparecer el código, las plantillas,
-los tests, `requirements.txt`, `.env.example`, `.env.alwaysdata.example` y la
+los tests, `requirements.txt`, `.env.example` y la
 documentación; **no** los archivos ignorados.
 
 ## 3. Crear el repositorio público y subir

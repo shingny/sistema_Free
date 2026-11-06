@@ -10,19 +10,19 @@ opcionalmente, con la aplicación alojada allí.
 ## Datos de la base
 
 > En este proyecto, los valores reales de host y base ya están en
-> `.env.alwaysdata` (ignorado por Git). Esta guía usa `TU_CUENTA` como
+> `.env` (ignorado por Git). Esta guía usa `TU_CUENTA` como
 > marcador para poder publicarse sin exponer la cuenta.
 
 | Dato | Valor |
 | --- | --- |
 | Host | `mysql-TU_CUENTA.alwaysdata.net` |
 | Base | `TU_CUENTA_TU_BASE` |
-| Usuario | lo completas en `.env.alwaysdata` |
-| Contraseña | la completas en `.env.alwaysdata` |
+| Usuario | lo completas en `.env` |
+| Contraseña | la completas en `.env` |
 | Puerto | `3306` |
 
 El usuario y la contraseña **no** se guardan en el repositorio. Van en
-`.env.alwaysdata` (ignorado por Git).
+`.env` (ignorado por Git).
 
 ## 1. Preparar el entorno local
 
@@ -30,7 +30,7 @@ El usuario y la contraseña **no** se guardan en el repositorio. Van en
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Abre `.env.alwaysdata` (ya existe con el host y la base reales) y completa:
+Abre `.env` (ya existe con el host y la base reales) y completa:
 
 ```dotenv
 DB_USER=tu_usuario
@@ -38,7 +38,7 @@ DB_PASSWORD=tu_contraseña
 SECRET_KEY=una_clave_larga_y_aleatoria
 ```
 
-> Si prefieres empezar de cero, usa `.env.alwaysdata.example` como plantilla.
+> Si prefieres empezar de cero, usa `.env.example` como plantilla.
 
 Si vas a conectarte desde tu casa u oficina, activa el **acceso remoto** de la
 base en el panel de Alwaysdata y autoriza tu IP:
@@ -52,15 +52,14 @@ Sin ese paso, la conexión desde tu equipo dará `Can't connect to MySQL server`
 ## 2. Comprobar la conexión
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\migrar_sqlite_a_mysql.py --env .env.alwaysdata --check
+.\.venv\Scripts\python.exe scripts\migrar_sqlite_a_mysql.py --check
 ```
 
 Debe mostrar el servidor, la base, el charset `utf8mb4` y el número de tablas.
 
-> `ENV_FILE=.env.alwaysdata` sirve para comandos (`migrate`, scripts, `shell`).
-> Para levantar `runserver` en tu PC sigue usando el `.env` local con SQLite, o
-> crea una copia con `DEBUG=1` y `SECURE_SSL_REDIRECT=0` si quieres probar la
-> app contra la base en la nube.
+> Para levantar `runserver` en tu PC, `.env` ya trae `DEBUG=1` y
+> `SECURE_SSL_REDIRECT=0`, así que la app funciona contra la base en la nube.
+> Si prefieres un entorno local sin conexión, pon `DB_ENGINE=sqlite` en `.env`.
 
 ## 3. Actualizar y respaldar SQLite
 
@@ -75,36 +74,25 @@ El respaldo queda en `backups/` (ignorado por Git).
 
 ## 4. Crear el esquema en MySQL
 
-En PowerShell:
-
 ```powershell
-$env:ENV_FILE=".env.alwaysdata"
 .\.venv\Scripts\python.exe manage.py migrate
 ```
 
-En Linux/macOS:
-
-```bash
-ENV_FILE=.env.alwaysdata python manage.py migrate
-```
-
-`ENV_FILE` hace que `config/settings.py` lea `.env.alwaysdata` en lugar de
-`.env`. El archivo `.env` local puede seguir usando SQLite sin cambios.
-Mantén `ENV_FILE` definido en la misma sesión para los comandos siguientes; si
-abres otra terminal, vuelve a definirlo.
+`config/settings.py` lee `.env` por defecto (o el archivo indicado en
+`ENV_FILE`, si lo defines).
 
 ## 5. Copiar los datos
 
 Primero simula la copia:
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\migrar_sqlite_a_mysql.py --env .env.alwaysdata --dry-run
+.\.venv\Scripts\python.exe scripts\migrar_sqlite_a_mysql.py --dry-run
 ```
 
 Luego ejecuta la copia real:
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\migrar_sqlite_a_mysql.py --env .env.alwaysdata --yes
+.\.venv\Scripts\python.exe scripts\migrar_sqlite_a_mysql.py --yes
 ```
 
 El script:
@@ -173,7 +161,7 @@ mueve `media/` a un sitio de archivos estáticos de Alwaysdata.
    ```
 
 3. Crea `.env` en el servidor con los datos de producción. Puedes copiar
-   `.env.alwaysdata.example` y completar `DB_USER`, `DB_PASSWORD` y
+   `.env.example` y completar `DB_USER`, `DB_PASSWORD` y
    `SECRET_KEY`.
 4. Ejecuta las migraciones y `collectstatic`:
 
