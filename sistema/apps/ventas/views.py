@@ -6,7 +6,7 @@ from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse
-from django.db.models import Prefetch, Q, Sum
+from django.db.models import Count, Prefetch, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -71,14 +71,15 @@ def inicio(request):
     turno = _turno_abierto(request.user)
     hoy = timezone.localdate()
     ventas_hoy = Venta.objects.filter(cajero=request.user, creada__date=hoy, estado="registrada")
+    resumen_hoy = ventas_hoy.aggregate(total=Sum("total"), operaciones=Count("id"))
     pedidos_abiertos = Pedido.objects.filter(
         estado__in=["pendiente", "en_preparacion", "listo"]
     ).order_by("creado")[:6]
     contexto = {
         "turno": turno,
         "ventas_hoy": ventas_hoy,
-        "total_hoy": ventas_hoy.aggregate(total=Sum("total"))["total"] or Decimal("0.00"),
-        "operaciones_hoy": ventas_hoy.count(),
+        "total_hoy": resumen_hoy["total"] or Decimal("0.00"),
+        "operaciones_hoy": resumen_hoy["operaciones"],
         "pedidos_abiertos": pedidos_abiertos,
         "puede_crear": request.user.tiene_permiso("ventas", "crear"),
     }
@@ -612,18 +613,27 @@ def metodo_pago_estado(request, pk):
 def caja_mesas(request):
     """Lista mesas activas con sus cuentas abiertas y detalles de consumo (panel caja)."""
     mesas = list(Mesa.objects.filter(activa=True).order_by("numero"))
+    cuentas = {
+        cuenta.mesa_id: cuenta
+        for cuenta in CuentaMesa.objects.filter(estado__in=["abierta", "cobro_solicitado"])
+        .select_related("mesa", "mesero", "venta")
+        .prefetch_related(
+            Prefetch(
+                "pedidos",
+                queryset=Pedido.objects.select_related("mesa")
+                .prefetch_related("detalles__producto")
+                .exclude(estado="cancelado")
+                .order_by("ronda", "creado"),
+            )
+        )
+    }
     filas = []
     for mesa in mesas:
-        cuenta = services.cuenta_abierta_de_mesa(mesa.pk)
+        cuenta = cuentas.get(mesa.pk)
         pedidos = []
         total = Decimal("0.00")
         if cuenta is not None:
-            pedidos = list(
-                cuenta.pedidos.select_related("mesa")
-                .prefetch_related("detalles__producto")
-                .exclude(estado="cancelado")
-                .order_by("ronda", "creado")
-            )
+            pedidos = list(cuenta.pedidos.all())
             total = sum((p.total for p in pedidos), Decimal("0.00"))
         filas.append({
             "mesa": mesa,

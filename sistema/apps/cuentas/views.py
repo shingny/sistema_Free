@@ -5,7 +5,8 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.core.cache import cache
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -61,7 +62,7 @@ def login_view(request):
                 usuario.intentos_fallidos = 0
                 usuario.bloqueado_hasta = None
                 usuario.save(update_fields=["intentos_fallidos", "bloqueado_hasta"])
-                login(request, usuario, backend="django.contrib.auth.backends.ModelBackend")
+                login(request, usuario, backend="apps.cuentas.backends.UsuarioBackend")
                 registrar(request, "login", "cuentas", usuario, "Inició sesión")
                 destino = request.GET.get("next", "")
                 if url_has_allowed_host_and_scheme(destino, {request.get_host()}, request.is_secure()):
@@ -256,14 +257,16 @@ def usuario_restablecer(request, pk):
 # ------------------------------------------------------------------- Roles
 @permiso_requerido("roles", "ver")
 def roles(request):
-    lista = Rol.objects.prefetch_related("permisos")
+    lista = Rol.objects.prefetch_related("permisos").annotate(
+        n_usuarios=Count("usuarios", filter=Q(usuarios__is_active=True))
+    )
     filas = []
     for r in lista:
         visibles = permisos_visibles(r.codigo)
         total_rol = len(todos_los_permisos()) if visibles is None else len(visibles)
         filas.append({
             "rol": r,
-            "usuarios": r.usuarios.filter(is_active=True).count(),
+            "usuarios": r.n_usuarios,
             "permisos": len(r.claves_permisos()),
             "total_permisos": total_rol,
             "editable": _rol_editable(request.user, r),
@@ -311,6 +314,7 @@ def rol_permisos(request, pk):
         agregados, quitados = sorted(nuevos - actuales), sorted(actuales - nuevos)
         if agregados or quitados:
             rol.permisos.set([p for p in Permiso.objects.all() if p.clave in nuevos])
+            cache.delete(f"cuentas.rol_permisos.{rol.pk}")
             registrar(request, "permisos", "roles", rol, f"Cambió los permisos del rol {rol.nombre}",
                       {"quitados": quitados}, {"agregados": agregados})
             messages.success(request, "Permisos actualizados. Aplican de inmediato a las nuevas peticiones.")

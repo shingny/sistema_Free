@@ -1,6 +1,7 @@
 import uuid
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator
 from django.db import models
@@ -43,10 +44,19 @@ class Configuracion(models.Model):
     def __str__(self):
         return self.nombre_comercial
 
+    CACHE_KEY = "nucleo.configuracion"
+
     @classmethod
     def obtener(cls):
-        obj, _ = cls.objects.get_or_create(pk=1)
+        obj = cache.get(cls.CACHE_KEY)
+        if obj is None:
+            obj, _ = cls.objects.get_or_create(pk=1)
+            cache.set(cls.CACHE_KEY, obj, 300)
         return obj
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        cache.delete(self.CACHE_KEY)
 
     def campos_pendientes(self):
         """Datos básicos que aún no se han registrado."""

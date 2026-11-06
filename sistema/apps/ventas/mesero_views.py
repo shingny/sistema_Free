@@ -104,11 +104,12 @@ def mesero_cuenta_detalle(request, pk):
         pk=pk,
     )
     categorias = Categoria.objects.filter(activo=True).prefetch_related(
-        # productos disponibles
+        Prefetch(
+            "productos",
+            queryset=Producto.objects.disponibles().order_by("nombre"),
+            to_attr="disponibles",
+        )
     ).order_by("orden", "nombre")
-    # attach disponibles manually
-    for cat in categorias:
-        cat.disponibles = list(Producto.objects.disponibles().filter(categoria=cat).order_by("nombre"))
     pedidos = list(cuenta.pedidos.order_by("ronda", "creado").prefetch_related("detalles"))
     pedidos_activos = [p for p in pedidos if p.estado != "cancelado"]
     total = sum((p.total for p in pedidos_activos), Decimal("0.00"))
@@ -287,7 +288,8 @@ def cuenta_json(request, pk):
         venta = None
     pedidos = []
     ultimo = None
-    for p in cuenta.pedidos.order_by("ronda", "creado"):
+    pedidos_cuenta = list(cuenta.pedidos.order_by("ronda", "creado"))
+    for p in pedidos_cuenta:
         if ultimo is None or (p.actualizado and p.actualizado > ultimo):
             ultimo = p.actualizado
         pedidos.append({
@@ -304,7 +306,7 @@ def cuenta_json(request, pk):
             "mesa": str(cuenta.mesa),
         },
         "pedidos": pedidos,
-        "total": str(sum((p.total for p in cuenta.pedidos.all() if p.estado != "cancelado"), Decimal("0.00"))),
+        "total": str(sum((p.total for p in pedidos_cuenta if p.estado != "cancelado"), Decimal("0.00"))),
         "venta": {
             "estado_pago": venta.estado_pago if venta is not None else None,
             "total": str(venta.total) if venta is not None else None,

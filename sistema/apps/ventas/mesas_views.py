@@ -1,12 +1,30 @@
 from django.contrib import messages
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.cuentas.permisos import denegar, permiso_requerido
 from apps.nucleo.auditoria import registrar
 from apps.ventas.forms import MesaForm
-from apps.ventas.models import CuentaMesa, Mesa
+from apps.ventas.models import CuentaMesa, Mesa, Pedido
 from apps.ventas.services import cuenta_abierta_de_mesa
+
+
+def _cuentas_abiertas():
+    """Cuentas de mesa activas con sus pedidos ya cargados (una sola consulta)."""
+    return {
+        cuenta.mesa_id: cuenta
+        for cuenta in CuentaMesa.objects.filter(
+            estado__in=["abierta", "cobro_solicitado"]
+        )
+        .select_related("mesa", "mesero", "venta")
+        .prefetch_related(
+            Prefetch(
+                "pedidos",
+                queryset=Pedido.objects.select_related("mesa").prefetch_related("detalles__producto"),
+            )
+        )
+    }
 
 
 def _estado_mesa(mesa):
@@ -38,14 +56,17 @@ def mesa_detalle(request, pk):
 @permiso_requerido("mesas", "ver")
 def mesas_lista(request):
     mesas = list(Mesa.objects.order_by("numero"))
+    cuentas = _cuentas_abiertas()
     filas = []
     for mesa in mesas:
-        estado, cuenta = _estado_mesa(mesa)
-        pedidos = []
+        cuenta = cuentas.get(mesa.pk)
         if cuenta is not None:
-            pedidos = list(
-                cuenta.pedidos.select_related("mesa").prefetch_related("detalles__producto").order_by("ronda", "creado")
-            )
+            estado = "ocupada"
+            pedidos = list(cuenta.pedidos.all())
+        elif not mesa.activa:
+            estado, pedidos = "inactiva", []
+        else:
+            estado, pedidos = "libre", []
         filas.append({
             "mesa": mesa,
             "estado": estado,

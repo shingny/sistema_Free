@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -105,7 +106,7 @@ else:
             "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
             "PORT": os.environ.get("DB_PORT", "3306"),
             "CONN_MAX_AGE": int(os.environ.get("DB_CONN_MAX_AGE", "60")),
-            "CONN_HEALTH_CHECKS": True,
+            "CONN_HEALTH_CHECKS": os.environ.get("DB_CONN_HEALTH_CHECKS", "1") == "1",
             "OPTIONS": {
                 "charset": "utf8mb4",
                 "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
@@ -115,10 +116,22 @@ else:
 # Cada petición es una transacción: la operación y su auditoría se guardan juntas.
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
 
+# Caché en memoria por proceso: evita releer datos casi constantes (configuración,
+# permisos de rol) en cada petición. Con base remota, cada consulta ahorrada cuenta.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "brase-locmem",
+        "TIMEOUT": 300,
+    }
+}
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ------------------------------------------------------------------ Seguridad
 AUTH_USER_MODEL = "cuentas.Usuario"
+# Trae el rol junto al usuario para ahorrar una consulta en cada petición.
+AUTHENTICATION_BACKENDS = ["apps.cuentas.backends.UsuarioBackend"]
 
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.Argon2PasswordHasher",
@@ -138,6 +151,9 @@ LOGIN_REDIRECT_URL = "nucleo:inicio"
 SESSION_COOKIE_AGE = 8 * 60 * 60  # un turno
 SESSION_SAVE_EVERY_REQUEST = True  # la sesión expira por inactividad
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+# Sesión en cookie firmada: evita leer y escribir la sesión en la base de datos en
+# CADA petición (con base remota, eran ~3-4 viajes de red por carga de panel).
+SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SECURE = not DEBUG
@@ -197,3 +213,8 @@ LOGGING = {
     "handlers": {"console": {"class": "logging.StreamHandler"}},
     "root": {"handlers": ["console"], "level": "INFO"},
 }
+
+# En las pruebas se desactiva la caché: cada test usa su propia base de datos y no
+# debe recibir datos cacheados de otro test.
+if "test" in sys.argv:
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.dummy.DummyCache"}}

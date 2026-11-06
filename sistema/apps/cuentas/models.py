@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser
+from django.core.cache import cache
 from django.db import models
 
 from .permisos import CATALOGO_PERMISOS, NOMBRES_ACCION, NOMBRES_MODULO, todos_los_permisos
@@ -44,7 +45,12 @@ class Rol(models.Model):
     def claves_permisos(self):
         if self.es_dueno:  # el dueño siempre conserva todos los permisos
             return {f"{m}.{a}" for m, a in todos_los_permisos()}
-        return {p.clave for p in self.permisos.all()}
+        clave_cache = f"cuentas.rol_permisos.{self.pk}"
+        claves = cache.get(clave_cache)
+        if claves is None:
+            claves = {p.clave for p in self.permisos.all()}
+            cache.set(clave_cache, claves, 300)
+        return claves
 
 
 class Usuario(AbstractUser):

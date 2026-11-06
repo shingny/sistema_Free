@@ -98,13 +98,12 @@ class TurnoCaja(models.Model):
 
     def efectivo_calculado(self):
         """Monto inicial + ingresos de ventas/manuales - egresos - devoluciones (solo efectivo)."""
-        movimientos = self.movimientos.filter(afecta_efectivo=True)
-        ingresos = movimientos.filter(tipo__in=["venta", "ingreso"]).aggregate(
-            total=Sum("monto")
-        )["total"] or Decimal("0.00")
-        salidas = movimientos.filter(tipo__in=["egreso", "devolucion"]).aggregate(
-            total=Sum("monto")
-        )["total"] or Decimal("0.00")
+        resumen = self.movimientos.filter(afecta_efectivo=True).aggregate(
+            ingresos=Sum("monto", filter=Q(tipo__in=["venta", "ingreso"])),
+            salidas=Sum("monto", filter=Q(tipo__in=["egreso", "devolucion"])),
+        )
+        ingresos = resumen["ingresos"] or Decimal("0.00")
+        salidas = resumen["salidas"] or Decimal("0.00")
         return self.monto_inicial + ingresos - salidas
 
 
@@ -337,11 +336,22 @@ class Venta(models.Model):
             super().save(update_fields=["numero"])
 
     @property
+    def _pagos_precargados(self):
+        """Pagos ya traídos con prefetch_related, o None si no se precargaron."""
+        return getattr(self, "_prefetched_objects_cache", {}).get("pagos")
+
+    @property
     def total_pagado(self):
+        pagos = self._pagos_precargados
+        if pagos is not None:
+            return sum((p.monto for p in pagos if p.estado == "verificado"), Decimal("0.00"))
         return self.pagos.filter(estado="verificado").aggregate(total=Sum("monto"))["total"] or Decimal("0.00")
 
     @property
     def total_en_verificacion(self):
+        pagos = self._pagos_precargados
+        if pagos is not None:
+            return sum((p.monto for p in pagos if p.estado == "pendiente_verificacion"), Decimal("0.00"))
         return self.pagos.filter(estado="pendiente_verificacion").aggregate(
             total=Sum("monto")
         )["total"] or Decimal("0.00")

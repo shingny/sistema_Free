@@ -3,11 +3,10 @@ from datetime import datetime, time, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Q, Sum
+from django.db.models import Avg, Count, DurationField, ExpressionWrapper, F, Q, Sum
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
-from django.db.models import Avg, Count, Q
 
 from apps.cuentas.models import Rol, Usuario
 from apps.cuentas.permisos import denegar, permiso_requerido
@@ -67,18 +66,30 @@ def dashboard(request):
         ventas_periodo = Venta.objects.filter(
             estado="registrada", creada__gte=inicio, creada__lt=fin
         )
-        total_vendido = ventas_periodo.aggregate(total=Sum("total"))["total"] or 0
-        operaciones = ventas_periodo.count()
+        resumen_ventas = ventas_periodo.aggregate(total=Sum("total"), operaciones=Count("id"))
+        total_vendido = resumen_ventas["total"] or 0
+        operaciones = resumen_ventas["operaciones"]
         pagos = Pago.objects.filter(venta__in=ventas_periodo, estado="verificado")
-        efectivo = pagos.filter(metodo__afecta_efectivo=True).aggregate(total=Sum("monto"))["total"] or 0
-        electronico = pagos.filter(metodo__afecta_efectivo=False).aggregate(total=Sum("monto"))["total"] or 0
-        cajas_abiertas = TurnoCaja.objects.filter(estado="abierta").count()
-        turnos_cerrados = TurnoCaja.objects.filter(
-            estado="cerrada", fecha_cierre__gte=inicio, fecha_cierre__lt=fin
+        resumen_pagos = pagos.aggregate(
+            efectivo=Sum("monto", filter=Q(metodo__afecta_efectivo=True)),
+            electronico=Sum("monto", filter=Q(metodo__afecta_efectivo=False)),
         )
-        cajas_cerradas = turnos_cerrados.count()
-        diferencia_total = turnos_cerrados.aggregate(total=Sum("diferencia"))["total"] or 0
-        turnos_con_diferencia = turnos_cerrados.exclude(diferencia=0).count()
+        efectivo = resumen_pagos["efectivo"] or 0
+        electronico = resumen_pagos["electronico"] or 0
+        turnos_cerrados = Q(estado="cerrada", fecha_cierre__gte=inicio, fecha_cierre__lt=fin)
+        resumen_turnos = TurnoCaja.objects.aggregate(
+            abiertas=Count("id", filter=Q(estado="abierta")),
+            cerradas=Count("id", filter=turnos_cerrados),
+            suma_diferencia=Sum("diferencia", filter=turnos_cerrados),
+            con_diferencia=Count(
+                "id",
+                filter=turnos_cerrados & (~Q(diferencia=0) | Q(diferencia__isnull=True)),
+            ),
+        )
+        cajas_abiertas = resumen_turnos["abiertas"] or 0
+        cajas_cerradas = resumen_turnos["cerradas"] or 0
+        diferencia_total = resumen_turnos["suma_diferencia"] or 0
+        turnos_con_diferencia = resumen_turnos["con_diferencia"] or 0
         ventas_por_cajero = ventas_periodo.values(
             "cajero__first_name", "cajero__last_name", "cajero__username"
         ).annotate(total=Sum("total"), operaciones=Count("id")).order_by("-total")
@@ -86,13 +97,23 @@ def dashboard(request):
             estado__in=["pendiente", "en_preparacion", "listo"]
         ).count()
 
+    conteo_usuarios = Usuario.objects.aggregate(
+        total=Count("id"), activos=Count("id", filter=Q(is_active=True))
+    )
+    conteo_productos = Producto.objects.aggregate(
+        total=Count("id"), activos=Count("id", filter=Q(activo=True))
+    )
+    conteo_categorias = Categoria.objects.aggregate(
+        total=Count("id"), activos=Count("id", filter=Q(activo=True))
+    )
+
     contexto = {
-        "total_usuarios": Usuario.objects.count(),
-        "usuarios_activos": Usuario.objects.filter(is_active=True).count(),
-        "productos_activos": Producto.objects.filter(activo=True).count(),
-        "productos_total": Producto.objects.count(),
-        "categorias_total": Categoria.objects.count(),
-        "categorias_activas": Categoria.objects.filter(activo=True).count(),
+        "total_usuarios": conteo_usuarios["total"],
+        "usuarios_activos": conteo_usuarios["activos"],
+        "productos_activos": conteo_productos["activos"],
+        "productos_total": conteo_productos["total"],
+        "categorias_total": conteo_categorias["total"],
+        "categorias_activas": conteo_categorias["activos"],
         "por_rol": Rol.objects.annotate(
             n=Count("usuarios", filter=Q(usuarios__is_active=True))
         ).order_by("-nivel"),
@@ -125,7 +146,10 @@ def configuracion(request):
         if not puede_editar:
             return denegar(request, "configuracion", "editar")
         antes = valores(config, campos)
-        form = ConfiguracionForm(request.POST, request.FILES, instance=config)
+        # Instancia fresca: el formulario muta la instancia aunque no sea válido, y
+        # no queremos contaminar la copia que está en caché.
+        objeto = Configuracion.objects.get(pk=config.pk)
+        form = ConfiguracionForm(request.POST, request.FILES, instance=objeto)
         if form.is_valid():
             objeto = form.save(commit=False)
             if form.cleaned_data.get("quitar_logo") and not request.FILES.get("logo"):
@@ -211,12 +235,14 @@ def pedidos_supervision(request):
     pagina, parametros = paginar(request, qs, 20)
 
     base = Pedido.objects.all()
-    por_estado = base.values("estado").annotate(n=Count("id")).order_by("estado")
+    por_estado = list(base.values("estado").annotate(n=Count("id")).order_by("estado"))
     por_modalidad = base.values("origen").annotate(n=Count("id"), total=Sum("total")).order_by("origen")
-    # tiempo promedio de preparación: pedidos entregados con actualizado-creado
-    entregados = base.filter(estado="entregado")
-    tiempos = [ (p.actualizado - p.creado).total_seconds()/60 for p in entregados if p.actualizado and p.creado ]
-    tiempo_promedio = (sum(tiempos)/len(tiempos)) if tiempos else 0
+    conteo_estados = {fila["estado"]: fila["n"] for fila in por_estado}
+    # tiempo promedio de preparación: pedidos entregados (calculado en la base)
+    tiempo_promedio = base.filter(estado="entregado", actualizado__isnull=False, creado__isnull=False).aggregate(
+        promedio=Avg(ExpressionWrapper(F("actualizado") - F("creado"), output_field=DurationField()))
+    )["promedio"]
+    tiempo_promedio = (tiempo_promedio.total_seconds() / 60) if tiempo_promedio else 0
 
     meseros = base.values("creado_por__first_name", "creado_por__last_name", "creado_por__username").annotate(
         pedidos=Count("id"), total=Sum("total")
@@ -228,6 +254,6 @@ def pedidos_supervision(request):
         "por_estado": por_estado, "por_modalidad": por_modalidad,
         "tiempo_promedio": round(tiempo_promedio, 1),
         "meseros": meseros,
-        "pedidos_activos": base.filter(estado__in=["pendiente", "en_preparacion", "listo"]).count(),
-        "pedidos_cancelados": base.filter(estado="cancelado").count(),
+        "pedidos_activos": sum(conteo_estados.get(e, 0) for e in ["pendiente", "en_preparacion", "listo"]),
+        "pedidos_cancelados": conteo_estados.get("cancelado", 0),
     })
