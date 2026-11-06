@@ -3,10 +3,14 @@
 El repositorio será público. Antes de subirlo, comprueba que no haya secretos ni
 datos reales.
 
-> Ejecuta todos los comandos desde la raíz del proyecto:
-> `D:\polleria sistema\sistema\PANEL ADMINISTRATIVO DEL DUEÑO`.
-> No inicialices Git en `D:\polleria sistema` (la carpeta padre): `build.sh` y
-> `.python-version` deben quedar en la raíz del repositorio.
+> Estructura del repositorio:
+> - Raíz del repo (donde vive `.git`):
+>   `D:\polleria sistema\sistema\PANEL ADMINISTRATIVO DEL DUEÑO`
+> - Código del proyecto: `...\PANEL ADMINISTRATIVO DEL DUEÑO\sistema`
+>
+> Los comandos de **Git** (`git add`, `git commit`, `git push`) se ejecutan en la
+> raíz del repo. Los comandos de **Django** (`manage.py`, `pip`, tests) se
+> ejecutan dentro de `sistema`. En Render, configura **Root Directory = `sistema`**.
 
 ## 1. Archivos que NO deben subirse
 

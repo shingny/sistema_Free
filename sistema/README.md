@@ -10,9 +10,13 @@ SQLite; en producción, MySQL/MariaDB mediante **PyMySQL**. Los archivos
 estáticos se sirven con **WhiteNoise**. La aplicación web está preparada para
 desplegarse en **Render** con Gunicorn.
 
+> El código vive en la carpeta `sistema/` del repositorio. Entra ahí antes de
+> ejecutar los comandos: `cd sistema`.
+
 ## Puesta en marcha local (SQLite)
 
 ```powershell
+cd sistema
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe manage.py migrate
 .\.venv\Scripts\python.exe manage.py inicializar

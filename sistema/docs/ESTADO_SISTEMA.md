@@ -1,7 +1,7 @@
 # Estado del sistema — Pollería
 
 **Actualizado:** 5 de noviembre de 2026  
-**Proyecto:** `D:\polleria sistema\sistema\PANEL ADMINISTRATIVO DEL DUEÑO`  
+**Proyecto:** `D:\polleria sistema\sistema\PANEL ADMINISTRATIVO DEL DUEÑO\sistema` (repo raíz en `...\PANEL ADMINISTRATIVO DEL DUEÑO`)  
 **Estado:** Fase 2 completa y Fase 3 en desarrollo. Paneles de dueño, caja, cocina y mesero operativos.
 
 ## 1. Resumen ejecutivo

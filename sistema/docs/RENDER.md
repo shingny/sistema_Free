@@ -7,6 +7,10 @@ Arquitectura:
 - **Estáticos:** WhiteNoise (`collectstatic` en el build).
 - **Media:** imágenes versionadas en `media/` y servidas por URL en `/media/...`.
 
+Estructura del repositorio: todo el código vive en la carpeta `sistema/` de la
+raíz. Por eso, al crear el Web Service en Render, configura
+**Root Directory = `sistema`**.
+
 Archivos ya preparados:
 
 - `build.sh`: instala dependencias y ejecuta `collectstatic`.
@@ -32,6 +36,7 @@ Todo se hace desde el dashboard, **sin Blueprint**.
 3. Conecta el repositorio y completa:
    - **Name:** `brase-polleria` (único en tu workspace).
    - **Language / Runtime:** **Python 3**.
+   - **Root Directory:** `sistema`.
    - **Region:** **Frankfurt** (la más cercana a Alwaysdata).
    - **Branch:** `main`.
    - **Instance Type:** **Free** (o **Starter** si no quieres cold starts).
